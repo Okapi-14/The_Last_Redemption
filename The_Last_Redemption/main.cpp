@@ -21,13 +21,34 @@ int main()
     }
 
     sf::Text title("Menu Principal", font, 50);
-    title.setPosition(300, 50);
+    title.setPosition(800, 50);
 
-    sf::Text startButton("Start", font, 30);
-    startButton.setPosition(350, 200);
+    sf::Texture startTexture;
+    if (!startTexture.loadFromFile("assets/start.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite start(startTexture);
+    start.setPosition(750, 0);
+    sf::Vector2f startPosition = start.getPosition();
 
-    sf::Text quitButton("Quitter", font, 30);
-    quitButton.setPosition(350, 300);
+    sf::Texture paramTexture;
+    if (!paramTexture.loadFromFile("assets/param.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite param(paramTexture);
+    param.setPosition(750, 200);
+    sf::Vector2f paramPosition = param.getPosition();
+
+    sf::Texture quitTexture;
+    if (!quitTexture.loadFromFile("assets/quitter.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite quit(quitTexture);
+    quit.setPosition(750, 600);
+    sf::Vector2f quitPosition = quit.getPosition();
 
     sf::Texture perso1Texture;
     if (!perso1Texture.loadFromFile("assets/Ellie.png")) {
@@ -84,24 +105,33 @@ int main()
         while (window4.pollEvent(event4))
         {
             if (event4.type == sf::Event::Closed)
+            {
+                window4.close();
                 window3.close();
-
+                window2.close();
+                window1.close();
+            }
+                
             if (isMainMenu)
             {
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-                    if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    if (start.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
                         isMainMenu = false;
                         isCharacterSelection = true;
                     }
-                    if (quitButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    if (quit.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
                         window4.close();
                         window3.close();
                         window2.close();
                         window1.close();
+                    }
+                    if (param.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+
                     }
                 }
             }
@@ -135,8 +165,9 @@ int main()
         if (isMainMenu)
         {
             window4.draw(title);
-            window4.draw(startButton);
-            window4.draw(quitButton);
+            window4.draw(start);
+            window4.draw(param);
+            window4.draw(quit);
         }
         else if (isCharacterSelection)
         {
