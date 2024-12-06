@@ -6,11 +6,54 @@
 int windowHauteur = 1080;
 int windowLargeur = 1920;
 
-int main() 
+int main()
 {
-	sf::RenderWindow window1(sf::VideoMode(windowLargeur, windowHauteur), "test 3");
-	sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "test 2");
-	sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "test 1");
+    sf::RenderWindow window1(sf::VideoMode(windowLargeur, windowHauteur), "test 3");
+    sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "test 2");
+    sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "test 1");
+    sf::RenderWindow window4(sf::VideoMode(windowLargeur, windowHauteur), "Menu");
+
+    sf::Font font;
+    if (!font.loadFromFile("assets/arial.ttf"))
+    {
+        std::cerr << "Erreur de chargement de la police!\n";
+        return -1;
+    }
+
+    sf::Text title("Menu Principal", font, 50);
+    title.setPosition(300, 50);
+
+    sf::Text startButton("Start", font, 30);
+    startButton.setPosition(350, 200);
+
+    sf::Text quitButton("Quitter", font, 30);
+    quitButton.setPosition(350, 300);
+
+    sf::Texture perso1Texture;
+    if (!perso1Texture.loadFromFile("assets/Ellie.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso1(perso1Texture);
+    perso1.setPosition(200, 250);
+    sf::Vector2f perso1Position = perso1.getPosition();
+
+    sf::Texture perso2Texture;
+    if (!perso2Texture.loadFromFile("assets/Arthur.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso2(perso2Texture);
+    perso2.setPosition(500, 250);
+    sf::Vector2f perso2Position = perso2.getPosition();
+
+    sf::Sprite* persoChoisis = nullptr;
+
+    sf::Text backButton("Retour", font, 30);
+    backButton.setPosition(300, 600);
+
+    bool isMainMenu = true;
+    bool isCharacterSelection = false;
 
     sf::Texture fond1Texture;
     if (!fond1Texture.loadFromFile("assets/map1.png")) {
@@ -33,21 +76,125 @@ int main()
     }
     sf::Sprite fond3(fond3Texture);
 
-    while (window3.isOpen()) {
-        sf::Event event3;
-        while (window3.pollEvent(event3)) {
-            if (event3.type == sf::Event::Closed)
+    sf::Vector2i startPos;
+
+    while (window4.isOpen())
+    {
+        sf::Event event4;
+        while (window4.pollEvent(event4))
+        {
+            if (event4.type == sf::Event::Closed)
                 window3.close();
 
-            if (event3.type == sf::Event::KeyPressed) {
-                if (event3.key.code == sf::Keyboard::Enter) {
-                    window3.close();
-
+            if (isMainMenu)
+            {
+                if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
+                {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+                    if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        isMainMenu = false;
+                        isCharacterSelection = true;
+                    }
+                    if (quitButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        window4.close();
+                        window3.close();
+                        window2.close();
+                        window1.close();
+                    }
+                }
+            }
+            else if (isCharacterSelection)
+            {
+                if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
+                {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+                    if (perso1.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        std::cout << "Ellie est selectionne\n";
+                        persoChoisis = &perso1;
+                        window4.close();
+                    }
+                    if (perso2.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        std::cout << "Arthur est selectionne\n";
+                        persoChoisis = &perso2;
+                        window4.close();
+                    }
+                    if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        isMainMenu = true;
+                        isCharacterSelection = false;
+                    }
                 }
             }
         }
+        window4.clear();
+        
+        if (isMainMenu)
+        {
+            window4.draw(title);
+            window4.draw(startButton);
+            window4.draw(quitButton);
+        }
+        else if (isCharacterSelection)
+        {
+            window4.draw(perso1);
+            window4.draw(perso2);
+            window4.draw(backButton);
+        }
+        window4.display();
+    }
+
+    sf::Sprite* persoActuel = nullptr;
+    if (persoChoisis == &perso1) 
+    {
+        persoActuel = &perso1;
+    }
+    else if (persoChoisis == &perso2)
+    {
+        persoActuel = &perso2;
+    }
+
+    while (window3.isOpen()) {
+        sf::Event event3;
+        while (window3.pollEvent(event3))
+        {
+            if (event3.type == sf::Event::Closed)
+                window3.close();
+
+            if (event3.type == sf::Event::KeyPressed) 
+            {
+                if (event3.key.code == sf::Keyboard::Enter) window3.close();
+                if (event3.key.code == sf::Keyboard::Q) persoActuel->move(-5.0f, 0.0f);
+                if (event3.key.code == sf::Keyboard::D) persoActuel->move(5.0f, 0.0f);
+                if (event3.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -5.0f);
+                if (event3.key.code == sf::Keyboard::S) persoActuel->move(0.0f, 5.0f);
+                /*if (event3.key.code == sf::Keyboard::A)
+                if (event3.key.code == sf::Keyboard::E)*/
+            }
+
+            /*if (event3.type == sf::Event::MouseButtonPressed)
+            {
+                if (event3.mouseButton.button == sf::Mouse::Left)
+                {
+
+                }
+            }
+
+            if (event3.type == sf::Event::MouseButtonPressed)
+            {
+                if (event3.mouseButton.button == sf::Mouse::Right)
+                {
+
+                }
+            }*/
+        }
+       
         window3.clear();
         window3.draw(fond1);
+        window3.draw(*persoActuel);
         window3.display();
     }
 
@@ -63,9 +210,38 @@ int main()
 
                 }
             }
+
+            if (event2.type == sf::Event::KeyPressed) 
+            {
+                if (event2.key.code == sf::Keyboard::Enter) window2.close();
+                if (event2.key.code == sf::Keyboard::Q) persoActuel->move(-5.0f, 0.0f);
+                if (event2.key.code == sf::Keyboard::D) persoActuel->move(5.0f, 0.0f);
+                if (event2.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -5.0f);
+                if (event2.key.code == sf::Keyboard::S) persoActuel->move(0.0f, 5.0f);
+                /*if (event2.key.code == sf::Keyboard::A)
+                if (event2.key.code == sf::Keyboard::E)*/
+            }
+
+            /*if (event2.type == sf::Event::MouseButtonPressed)
+            {
+                if (event2.mouseButton.button == sf::Mouse::Left)
+                {
+
+                }
+            }
+
+            if (event2.type == sf::Event::MouseButtonPressed)
+            {
+                if (event2.mouseButton.button == sf::Mouse::Right)
+                {
+
+                }
+            }*/
         }
+        
         window2.clear();
         window2.draw(fond2);
+        window2.draw(*persoActuel);
         window2.display();
     }
 
@@ -81,9 +257,38 @@ int main()
 
                 }
             }
+
+            if (event1.type == sf::Event::KeyPressed) 
+            {
+                if (event1.key.code == sf::Keyboard::Enter) window1.close();
+                if (event1.key.code == sf::Keyboard::Q) persoActuel->move(-5.0f, 0.0f);
+                if (event1.key.code == sf::Keyboard::D) persoActuel->move(5.0f, 0.0f);
+                if (event1.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -5.0f);
+                if (event1.key.code == sf::Keyboard::S) persoActuel->move(0.0f, 5.0f);
+                /*if (event1.key.code == sf::Keyboard::A)
+                if (event1.key.code == sf::Keyboard::E)*/
+            }
+
+            /*if (event1.type == sf::Event::MouseButtonPressed)
+            {
+                if (event1.mouseButton.button == sf::Mouse::Left)
+                {
+
+                }
+            }
+
+            if (event1.type == sf::Event::MouseButtonPressed)
+            {
+                if (event1.mouseButton.button == sf::Mouse::Right)
+                {
+
+                }
+            }*/
         }
+
         window1.clear();
         window1.draw(fond3);
+        window1.draw(*persoActuel);
         window1.display();
     }
 
