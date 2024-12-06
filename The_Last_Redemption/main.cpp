@@ -6,7 +6,8 @@
 int windowHauteur = 1080;
 int windowLargeur = 1920;
 
-int main() {
+int main() 
+{
 	sf::RenderWindow window1(sf::VideoMode(windowLargeur, windowHauteur), "test 3");
 	sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "test 2");
 	sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "test 1");
