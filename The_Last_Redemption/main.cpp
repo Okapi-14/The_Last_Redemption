@@ -21,8 +21,8 @@ int main()
         return -1;
     }
 
-    sf::Text title("Menu Principal", font, 50);
-    title.setPosition(800, 50);
+    sf::Text title("The Last Redemption", font, 50);
+    title.setPosition(700, 50);
 
     sf::Texture startTexture;
     if (!startTexture.loadFromFile("assets/start.png")) {
@@ -30,7 +30,7 @@ int main()
         return -1;
     }
     sf::Sprite start(startTexture);
-    start.setPosition(750, 0);
+    start.setPosition(750, 100);
     sf::Vector2f startPosition = start.getPosition();
 
     sf::Texture paramTexture;
@@ -39,7 +39,7 @@ int main()
         return -1;
     }
     sf::Sprite param(paramTexture);
-    param.setPosition(750, 200);
+    param.setPosition(750, 300);
     sf::Vector2f paramPosition = param.getPosition();
 
     sf::Texture nivTexture;
@@ -48,7 +48,7 @@ int main()
         return -1;
     }
     sf::Sprite niv(nivTexture);
-    niv.setPosition(750, 400);
+    niv.setPosition(750, 500);
     sf::Vector2f nivPosition = niv.getPosition();
 
     sf::Texture quitTexture;
@@ -57,7 +57,7 @@ int main()
         return -1;
     }
     sf::Sprite quit(quitTexture);
-    quit.setPosition(750, 600);
+    quit.setPosition(750, 700);
     sf::Vector2f quitPosition = quit.getPosition();
 
     sf::Texture perso1Texture;
@@ -82,7 +82,7 @@ int main()
     sf::Sprite* niveauChoisis = nullptr;
 
     sf::Text backButton("Retour", font, 50);
-    backButton.setPosition(850, 800);
+    backButton.setPosition(850, 900);
 
     sf::Text title2("Choisis ton personnage", font, 50);
     title2.setPosition(700, 50);
@@ -90,23 +90,56 @@ int main()
     sf::Text title3("Parametre", font, 50);
     title3.setPosition(800, 50);
 
-    sf::Text diff("Difficulte", font, 30);
-    diff.setPosition(750, 200);
+    sf::Texture diffTexture;
+    if (!diffTexture.loadFromFile("assets/diff.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite diff(diffTexture);
+    diff.setPosition(650, -30);
+    sf::Vector2f diffPosition = diff.getPosition();
 
-    sf::Text music("Musique", font, 30);
-    music.setPosition(750, 300);
+    sf::Texture musicTexture;
+    if (!musicTexture.loadFromFile("assets/music.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite music(musicTexture);
+    music.setPosition(650, 130);
+    sf::Vector2f musicPosition = music.getPosition();
 
-    sf::Text video("Video", font, 30);
-    video.setPosition(750, 400);
+    sf::Texture videoTexture;
+    if (!videoTexture.loadFromFile("assets/video.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite video(videoTexture);
+    video.setPosition(650, 290);
+    sf::Vector2f videoPosition = video.getPosition();
 
-    sf::Text controls("Controles", font, 30);
-    controls.setPosition(750, 500);
-    
-    sf::Text language("Langues", font, 30);
-    language.setPosition(750, 600);
+    sf::Texture controlsTexture;
+    if (!controlsTexture.loadFromFile("assets/controls.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite controls(controlsTexture);
+    controls.setPosition(650, 450);
+    sf::Vector2f controlsPosition = controls.getPosition();
+
+    sf::Texture languageTexture;
+    if (!languageTexture.loadFromFile("assets/language.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite language(languageTexture);
+    language.setPosition(650, 610);
+    sf::Vector2f languagePosition = language.getPosition();
 
     sf::Text title4("Niveaux", font, 50);
     title4.setPosition(850, 50);
+
+    sf::Text title5("Difficulte", font, 50);
+    title5.setPosition(850, 50);
 
     sf::Text niv1t("Niveau 1", font, 30);
     niv1t.setPosition(500, 250);
@@ -116,6 +149,35 @@ int main()
 
     sf::Text niv3t("Niveau 3", font, 30);
     niv3t.setPosition(1250, 250);
+
+    std::string niveauDifficulte = "Normal";
+
+    sf::Texture normalTexture;
+    if (!normalTexture.loadFromFile("assets/normal.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite normal(normalTexture);
+    normal.setPosition(650, -30);
+    sf::Vector2f normalPosition = normal.getPosition();
+
+    sf::Texture difficileTexture;
+    if (!difficileTexture.loadFromFile("assets/difficile.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite difficile(difficileTexture);
+    difficile.setPosition(650, 200);
+    sf::Vector2f difficilePosition = difficile.getPosition();
+
+    sf::Texture hardcoreTexture;
+    if (!hardcoreTexture.loadFromFile("assets/hardcore.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite hardcore(hardcoreTexture);
+    hardcore.setPosition(650, 430);
+    sf::Vector2f hardcorePosition = hardcore.getPosition();
 
     sf::Texture niv1Texture;
     if (!niv1Texture.loadFromFile("assets/niv1.gif")) {
@@ -148,7 +210,7 @@ int main()
     bool isCharacterSelection = false;
     bool isParametre = false;
     bool isNiveaux = false;
-    bool isBut = false;
+    bool isChoosingDiff = false;
 
     sf::Texture fond1Texture;
     if (!fond1Texture.loadFromFile("assets/map1.png")) {
@@ -170,6 +232,13 @@ int main()
         return -1;
     }
     sf::Sprite fond3(fond3Texture);
+
+    sf::Texture mainMenuTexture;
+    if (!mainMenuTexture.loadFromFile("assets/mainMenu.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        //return -1;
+    }
+    sf::Sprite mainMenu(mainMenuTexture);
 
     sf::Vector2i startPos;
 
@@ -197,7 +266,7 @@ int main()
                         isCharacterSelection = true;
                         isParametre = false;
                         isNiveaux = false;
-                        isBut = false;
+                        isChoosingDiff = false;
                     }
                     if (quit.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
@@ -212,7 +281,7 @@ int main()
                         isCharacterSelection = false;
                         isParametre = true;
                         isNiveaux = false;
-                        isBut = false;
+                        isChoosingDiff = false;
                     }
                     if (niv.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
@@ -220,7 +289,7 @@ int main()
                         isCharacterSelection = false;
                         isParametre = false;
                         isNiveaux = true;
-                        isBut = false;
+                        isChoosingDiff = false;
                     }
                 }
             }
@@ -247,7 +316,7 @@ int main()
                         isCharacterSelection = false;
                         isParametre = false;
                         isNiveaux = false;
-                        isBut = false;
+                        isChoosingDiff = false;
                     }
                 }
             }
@@ -256,13 +325,21 @@ int main()
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+                    if (diff.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        isMainMenu = false;
+                        isCharacterSelection = false;
+                        isParametre = false;
+                        isNiveaux = false;
+                        isChoosingDiff = true;
+                    }
                     if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
                         isMainMenu = true;
                         isCharacterSelection = false;
                         isParametre = false;
                         isNiveaux = false;
-                        isBut = false;
+                        isChoosingDiff = false;
                     }
                 }
             }
@@ -295,7 +372,52 @@ int main()
                         isCharacterSelection = false;
                         isParametre = false;
                         isNiveaux = false;
-                        isBut = false;
+                        isChoosingDiff = false;
+                    }
+                }
+            }
+            else if (isChoosingDiff)
+            {
+                if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
+                {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+                    if (normal.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        niveauDifficulte = "Normal";
+                        std::cout << "Difficulte selectionne : Normal\n";
+                        isMainMenu = false;
+                        isCharacterSelection = false;
+                        isParametre = true;
+                        isNiveaux = false;
+                        isChoosingDiff = false;
+                    }
+                    else if (difficile.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        niveauDifficulte = "Difficle";
+                        std::cout << "Difficulte selectionne : Difficile\n";
+                        isMainMenu = false;
+                        isCharacterSelection = false;
+                        isParametre = true;
+                        isNiveaux = false;
+                        isChoosingDiff = false;
+                    }
+                    else if (hardcore.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        niveauDifficulte = "Hardcore";
+                        std::cout << "Difficulte selectionne : Hardcore\n";
+                        isMainMenu = false;
+                        isCharacterSelection = false;
+                        isParametre = true;
+                        isNiveaux = false;
+                        isChoosingDiff = false;
+                    }
+                    else if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        isMainMenu = false;
+                        isCharacterSelection = false;
+                        isParametre = true;
+                        isNiveaux = false;
+                        isChoosingDiff = false;
                     }
                 }
             }
@@ -305,6 +427,7 @@ int main()
         if (isMainMenu)
         {
             window4.draw(title);
+            window4.draw(mainMenu);
             window4.draw(start);
             window4.draw(param);
             window4.draw(niv);
@@ -338,16 +461,24 @@ int main()
             window4.draw(niv3);
             window4.draw(backButton);
         }
+        else if (isChoosingDiff)
+        {
+            window4.draw(title5);
+            window4.draw(normal);
+            window4.draw(difficile);
+            window4.draw(hardcore);
+            window4.draw(backButton);
+        }
         window4.display();
     }
 
     sf::Sprite* persoActuel = nullptr;
-    if (persoChoisis == &perso1) 
+    if (persoChoisis == &perso1)
     {
         persoChoisis->setPosition(initialCharacterPosition);
         persoActuel = &perso1;
     }
-    else if (persoChoisis == &perso2) 
+    else if (persoChoisis == &perso2)
     {
         persoChoisis->setPosition(initialCharacterPosition);
         persoActuel = &perso2;
