@@ -6,6 +6,32 @@
 int windowHauteur = 1080;
 int windowLargeur = 1920;
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
+struct LevelObject
+{
+    sf::Sprite sprite;
+    std::string type;
+};
+
+struct Projectile {
+    sf::RectangleShape shape;
+    sf::Vector2f velocity;
+
+    Projectile(sf::Vector2f startPosition, sf::Vector2f direction) {
+        shape.setSize(sf::Vector2f(10.0f, 10.0f)); // Taille du carré
+        shape.setFillColor(sf::Color::Red);
+        shape.setPosition(startPosition);
+        velocity = direction * 3.0f; // Vitesse plus lente du projectile
+    }
+
+    void update(float deltaTime) {
+        shape.move(velocity * deltaTime);
+    }
+
+    bool isOffScreen(int windowWidth, int windowHeight) {
+        sf::Vector2f pos = shape.getPosition();
+        return pos.x < 0 || pos.x > windowWidth || pos.y < 0 || pos.y > windowHeight;
+    }
+};
 
 int main()
 {
@@ -20,9 +46,6 @@ int main()
         std::cerr << "Erreur de chargement de la police!\n";
         return -1;
     }
-
-    sf::Text title("The Last Redemption", font, 50);
-    title.setPosition(700, 50);
 
     sf::Texture startTexture;
     if (!startTexture.loadFromFile("assets/start.png")) {
@@ -79,7 +102,6 @@ int main()
     sf::Vector2f perso2Position = perso2.getPosition();
 
     sf::Sprite* persoChoisis = nullptr;
-    sf::Sprite* niveauChoisis = nullptr;
 
     sf::Text backButton("Retour", font, 50);
     backButton.setPosition(850, 900);
@@ -211,6 +233,58 @@ int main()
     bool isParametre = false;
     bool isNiveaux = false;
     bool isChoosingDiff = false;
+    bool isDragging = false;
+
+    sf::Texture persoETexture;
+    if (!persoETexture.loadFromFile("assets/Ellie.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso1Icon(persoETexture);
+    perso1Icon.setPosition(-40, 0);
+
+    sf::Texture persoATexture;
+    if (!persoATexture.loadFromFile("assets/Arthur.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso2Icon(persoATexture);
+    perso2Icon.setPosition(170, 0);
+
+    sf::Texture runnersTexture;
+    if (!runnersTexture.loadFromFile("assets/runners.gif")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite runners(runnersTexture);
+    runners.setPosition(10, 300);
+
+    sf::Texture stalkersTexture;
+    if (!stalkersTexture.loadFromFile("assets/stalkers.gif")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite stalkers(stalkersTexture);
+    stalkers.setPosition(250, 300);
+
+    sf::Texture clickersTexture;
+    if (!clickersTexture.loadFromFile("assets/clickers.gif")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite clickers(clickersTexture);
+    clickers.setPosition(10, 600);
+
+    std::vector<LevelObject> placedObjects;
+    LevelObject* currentObject = nullptr;
+
+    sf::Texture backTexture;
+    if (!backTexture.loadFromFile("assets/back.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite backButtonMaker(backTexture);
+    backButtonMaker.setPosition(1750, -40);
 
     sf::Texture fond1Texture;
     if (!fond1Texture.loadFromFile("assets/map1.png")) {
@@ -236,7 +310,7 @@ int main()
     sf::Texture mainMenuTexture;
     if (!mainMenuTexture.loadFromFile("assets/mainMenu.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
-        //return -1;
+        return -1;
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
@@ -348,31 +422,61 @@ int main()
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-                    if (niv1.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    if (perso1Icon.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        std::cout << "Niveau 1 est selectionne\n";
-                        niveauChoisis = &niv1;
-                        window4.close();
+                        placedObjects.push_back({ sf::Sprite(persoETexture), "Ellie" });
+                        currentObject = &placedObjects.back();
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
+                        isDragging = true;
                     }
-                    if (niv2.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (perso2Icon.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        std::cout << "Niveau 2 est selectionne\n";
-                        niveauChoisis = &niv2;
-                        window4.close();
+                        placedObjects.push_back({ sf::Sprite(persoATexture), "Arthur" });
+                        currentObject = &placedObjects.back();
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
+                        isDragging = true;
                     }
-                    if (niv3.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (runners.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        std::cout << "Niveau 3 est selectionne\n";
-                        niveauChoisis = &niv3;
-                        window4.close();
+                        placedObjects.push_back({ sf::Sprite(runnersTexture), "Runner" });
+                        currentObject = &placedObjects.back();
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
+                        isDragging = true;
                     }
-                    if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (stalkers.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        placedObjects.push_back({ sf::Sprite(stalkersTexture), "Stalker" });
+                        currentObject = &placedObjects.back();
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
+                        isDragging = true;
+                    }
+                    else if (clickers.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    {
+                        placedObjects.push_back({ sf::Sprite(clickersTexture), "Clicker" });
+                        currentObject = &placedObjects.back();
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
+                        isDragging = true;
+                    }
+                    else if (backButtonMaker.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
                         isMainMenu = true;
                         isCharacterSelection = false;
                         isParametre = false;
                         isNiveaux = false;
                         isChoosingDiff = false;
+                    }
+                }
+                if (event4.type == sf::Event::MouseButtonReleased && event4.mouseButton.button == sf::Mouse::Left)
+                {
+                    isDragging = false;
+                    currentObject = nullptr;
+                }
+                else if (event4.type == sf::Event::MouseMoved && isDragging)
+                {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+                    if (currentObject)
+                    {
+                        currentObject->sprite.setPosition(mousePos.x, mousePos.y);
                     }
                 }
             }
@@ -426,7 +530,6 @@ int main()
 
         if (isMainMenu)
         {
-            window4.draw(title);
             window4.draw(mainMenu);
             window4.draw(start);
             window4.draw(param);
@@ -452,14 +555,17 @@ int main()
         }
         else if (isNiveaux)
         {
-            window4.draw(title4);
-            window4.draw(niv1t);
-            window4.draw(niv2t);
-            window4.draw(niv3t);
-            window4.draw(niv1);
-            window4.draw(niv2);
-            window4.draw(niv3);
-            window4.draw(backButton);
+            window4.draw(fond1);
+            window4.draw(perso1Icon);
+            window4.draw(perso2Icon);
+            window4.draw(runners);
+            window4.draw(stalkers);
+            window4.draw(clickers);
+            window4.draw(backButtonMaker);
+            for (const auto& obj : placedObjects)
+            {
+                window4.draw(obj.sprite);
+            }
         }
         else if (isChoosingDiff)
         {
@@ -484,12 +590,20 @@ int main()
         persoActuel = &perso2;
     }
 
+    std::vector<Projectile> projectiles;
+    float cooldownTime = 0.1f;
+    float timeSinceLastShot = cooldownTime;
+
     while (window3.isOpen()) {
         sf::Event event3;
         while (window3.pollEvent(event3))
         {
             if (event3.type == sf::Event::Closed)
+            {
                 window3.close();
+                window2.close();
+                window1.close();
+            }
 
             if (event3.type == sf::Event::KeyPressed)
             {
@@ -502,15 +616,17 @@ int main()
                 if (event3.key.code == sf::Keyboard::E)*/
             }
 
-            /*if (event3.type == sf::Event::MouseButtonPressed)
+            if (event3.type == sf::Event::MouseButtonPressed)
             {
-                if (event3.mouseButton.button == sf::Mouse::Left)
+                if (event3.mouseButton.button == sf::Mouse::Left && timeSinceLastShot >= cooldownTime)
                 {
-
+                    sf::Vector2f direction(1.0f, 0.0f);
+                    projectiles.emplace_back(persoActuel->getPosition(), direction);
+                    timeSinceLastShot = 0.0f;
                 }
             }
 
-            if (event3.type == sf::Event::MouseButtonPressed)
+            /*if (event3.type == sf::Event::MouseButtonPressed)
             {
                 if (event3.mouseButton.button == sf::Mouse::Right)
                 {
@@ -518,10 +634,22 @@ int main()
                 }
             }*/
         }
+        float deltaTime = 0.1f;
+        timeSinceLastShot += deltaTime;
+
+        for (auto& proj : projectiles) {
+            proj.update(deltaTime);
+        }
+        projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
+            [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
+            projectiles.end());
 
         window3.clear();
         window3.draw(fond1);
         window3.draw(*persoActuel);
+        for (auto& proj : projectiles) {
+            window3.draw(proj.shape);
+        }
         window3.display();
     }
 
@@ -529,7 +657,10 @@ int main()
         sf::Event event2;
         while (window2.pollEvent(event2)) {
             if (event2.type == sf::Event::Closed)
+            {
                 window2.close();
+                window1.close();
+            }
 
             if (event2.type == sf::Event::KeyPressed) {
                 if (event2.key.code == sf::Keyboard::Enter) {
@@ -549,15 +680,17 @@ int main()
                 if (event2.key.code == sf::Keyboard::E)*/
             }
 
-            /*if (event2.type == sf::Event::MouseButtonPressed)
+            if (event2.type == sf::Event::MouseButtonPressed)
             {
-                if (event2.mouseButton.button == sf::Mouse::Left)
+                if (event2.mouseButton.button == sf::Mouse::Left && timeSinceLastShot >= cooldownTime)
                 {
-
+                    sf::Vector2f direction(1.0f, 0.0f);
+                    projectiles.emplace_back(persoActuel->getPosition(), direction);
+                    timeSinceLastShot = 0.0f;
                 }
             }
 
-            if (event2.type == sf::Event::MouseButtonPressed)
+            /*if (event2.type == sf::Event::MouseButtonPressed)
             {
                 if (event2.mouseButton.button == sf::Mouse::Right)
                 {
@@ -566,9 +699,22 @@ int main()
             }*/
         }
 
+        float deltaTime = 0.1f;
+        timeSinceLastShot += deltaTime;
+
+        for (auto& proj : projectiles) {
+            proj.update(deltaTime);
+        }
+        projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
+            [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
+            projectiles.end());
+
         window2.clear();
         window2.draw(fond2);
         window2.draw(*persoActuel);
+        for (auto& proj : projectiles) {
+            window2.draw(proj.shape);
+        }
         window2.display();
     }
 
@@ -596,15 +742,17 @@ int main()
                 if (event1.key.code == sf::Keyboard::E)*/
             }
 
-            /*if (event1.type == sf::Event::MouseButtonPressed)
+            if (event1.type == sf::Event::MouseButtonPressed)
             {
-                if (event1.mouseButton.button == sf::Mouse::Left)
+                if (event1.mouseButton.button == sf::Mouse::Left && timeSinceLastShot >= cooldownTime)
                 {
-
+                    sf::Vector2f direction(1.0f, 0.0f);
+                    projectiles.emplace_back(persoActuel->getPosition(), direction);
+                    timeSinceLastShot = 0.0f;
                 }
             }
 
-            if (event1.type == sf::Event::MouseButtonPressed)
+            /*if (event1.type == sf::Event::MouseButtonPressed)
             {
                 if (event1.mouseButton.button == sf::Mouse::Right)
                 {
@@ -612,10 +760,22 @@ int main()
                 }
             }*/
         }
+        float deltaTime = 0.1f;
+        timeSinceLastShot += deltaTime;
+
+        for (auto& proj : projectiles) {
+            proj.update(deltaTime);
+        }
+        projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
+            [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
+            projectiles.end());
 
         window1.clear();
         window1.draw(fond3);
         window1.draw(*persoActuel);
+        for (auto& proj : projectiles) {
+            window1.draw(proj.shape);
+        }
         window1.display();
     }
 
