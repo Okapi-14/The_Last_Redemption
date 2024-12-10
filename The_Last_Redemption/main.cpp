@@ -17,10 +17,10 @@ struct Projectile {
     sf::Vector2f velocity;
 
     Projectile(sf::Vector2f startPosition, sf::Vector2f direction) {
-        shape.setSize(sf::Vector2f(10.0f, 10.0f)); // Taille du carré
+        shape.setSize(sf::Vector2f(10.0f, 10.0f));
         shape.setFillColor(sf::Color::Red);
         shape.setPosition(startPosition);
-        velocity = direction * 3.0f; // Vitesse plus lente du projectile
+        velocity = direction * 2.0f;
     }
 
     void update(float deltaTime) {
