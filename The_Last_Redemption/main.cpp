@@ -6,6 +6,54 @@
 int windowHauteur = 1080;
 int windowLargeur = 1920;
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
+
+struct Button {
+    sf::RectangleShape shape;
+    sf::Text text;
+    bool isHovered;
+
+    Button(const sf::Vector2f& position, const sf::Vector2f& size, const std::string& label, sf::Font& font) {
+        shape.setPosition(position);
+        shape.setSize(size);
+        shape.setFillColor(sf::Color(139, 0, 0)); // Rouge foncé
+
+        text.setFont(font);
+        text.setString(label);
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+
+        // Centrer le texte dans le bouton
+        sf::FloatRect textBounds = text.getLocalBounds();
+        text.setPosition(
+            position.x + (size.x - textBounds.width) / 2 - textBounds.left,
+            position.y + (size.y - textBounds.height) / 2 - textBounds.top
+        );
+
+        isHovered = false;
+    }
+
+    void update(const sf::Vector2i& mousePos) {
+        if (shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
+            if (!isHovered) {
+                shape.setFillColor(sf::Color::Black); // Couleur noire quand survolé
+                isHovered = true;
+            }
+        }
+        else {
+            if (isHovered) {
+                shape.setFillColor(sf::Color(139, 0, 0)); // Retour au rouge foncé
+                isHovered = false;
+            }
+        }
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(shape);
+        window.draw(text);
+    }
+};
+
+
 struct LevelObject
 {
     sf::Sprite sprite;
@@ -35,9 +83,9 @@ struct Projectile {
 
 int main()
 {
-    sf::RenderWindow window1(sf::VideoMode(windowLargeur, windowHauteur), "test 3");
-    sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "test 2");
-    sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "test 1");
+    sf::RenderWindow window1(sf::VideoMode(windowLargeur, windowHauteur), "niveau1");
+    sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "niveau 2");
+    sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "niveau 1");
     sf::RenderWindow window4(sf::VideoMode(windowLargeur, windowHauteur), "Menu");
 
     sf::Font font;
@@ -47,41 +95,50 @@ int main()
         return -1;
     }
 
-    sf::Texture startTexture;
-    if (!startTexture.loadFromFile("assets/start.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite start(startTexture);
-    start.setPosition(750, 100);
-    sf::Vector2f startPosition = start.getPosition();
+    std::vector<Button> mainButtons;
+    std::vector<Button> settingsButtons;
+    std::vector<Button> diffButtons;
+    bool isInSettings = false;
 
-    sf::Texture paramTexture;
-    if (!paramTexture.loadFromFile("assets/param.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite param(paramTexture);
-    param.setPosition(750, 300);
-    sf::Vector2f paramPosition = param.getPosition();
+    const float buttonWidth = 300;
+    const float buttonHeight = 70;
+    const float startY = 400; // Position verticale de départ pour les boutons
+    const float spacing = 20; // Espacement entre les boutons
 
-    sf::Texture nivTexture;
-    if (!nivTexture.loadFromFile("assets/niv.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite niv(nivTexture);
-    niv.setPosition(750, 500);
-    sf::Vector2f nivPosition = niv.getPosition();
+    // Boutons principaux
+    mainButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, startY), sf::Vector2f(buttonWidth, buttonHeight), "Jouer", font);
+    mainButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, startY + buttonHeight + spacing), sf::Vector2f(buttonWidth, buttonHeight), "Parametres", font);
+    mainButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, startY + 2 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Niveaux", font);
+    mainButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, startY + 3 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Quitter", font);
 
-    sf::Texture quitTexture;
-    if (!quitTexture.loadFromFile("assets/quitter.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite quit(quitTexture);
-    quit.setPosition(750, 700);
-    sf::Vector2f quitPosition = quit.getPosition();
+    // Boutons des paramètres
+    const float settingsStartY = 300;
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY), sf::Vector2f(buttonWidth, buttonHeight), "Difficulte", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + buttonHeight + spacing), sf::Vector2f(buttonWidth, buttonHeight), "Musique", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 2 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Video", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 3 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Controles", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 4 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Retour", font);
+
+    const float diffStartY = 300;
+    diffButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY), sf::Vector2f(buttonWidth, buttonHeight), "Normal", font);
+    diffButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 2 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Difficile", font);
+    diffButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 4 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Hardcore", font);
+
+    sf::Text controlsText;
+    controlsText.setFont(font);
+    controlsText.setCharacterSize(24);
+    controlsText.setFillColor(sf::Color::White);
+    controlsText.setString(
+        "Z : Haut\n\n"
+        "Q : Gauche\n\n"
+        "S : Bas\n\n"
+        "D : Droite\n\n"
+        "Clic Gauche : Tirer\n\n"
+        "Clic Droit : Tirs speciaux\n\n"
+        "A : Changer d'items\n\n"
+        "E : Changer d'items speciaux"
+    );
+    controlsText.setPosition(100, 200);
 
     sf::Texture perso1Texture;
     if (!perso1Texture.loadFromFile("assets/Ellie.png")) {
@@ -109,8 +166,8 @@ int main()
     sf::Text title2("Choisis ton personnage", font, 50);
     title2.setPosition(700, 50);
 
-    sf::Text title3("Parametre", font, 50);
-    title3.setPosition(800, 50);
+    sf::Text title3("Parametres", font, 50);
+    title3.setPosition(830, 170);
 
     sf::Texture diffTexture;
     if (!diffTexture.loadFromFile("assets/diff.png")) {
@@ -161,7 +218,7 @@ int main()
     title4.setPosition(850, 50);
 
     sf::Text title5("Difficulte", font, 50);
-    title5.setPosition(850, 50);
+    title5.setPosition(830, 170);
 
     sf::Text niv1t("Niveau 1", font, 30);
     niv1t.setPosition(500, 250);
@@ -233,6 +290,7 @@ int main()
     bool isParametre = false;
     bool isNiveaux = false;
     bool isChoosingDiff = false;
+    bool isControles = false;
     bool isDragging = false;
 
     sf::Texture persoETexture;
@@ -334,36 +392,45 @@ int main()
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-                    if (start.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    for (auto& button : mainButtons)
                     {
-                        isMainMenu = false;
-                        isCharacterSelection = true;
-                        isParametre = false;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
-                    }
-                    if (quit.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        window4.close();
-                        window3.close();
-                        window2.close();
-                        window1.close();
-                    }
-                    if (param.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = true;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
-                    }
-                    if (niv.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = false;
-                        isNiveaux = true;
-                        isChoosingDiff = false;
+                        if (button.shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))if (button.shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        {
+                            if (button.text.getString() == "Jouer")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = true;
+                                isParametre = false;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                            if (button.text.getString() == "Quitter")
+                            {
+                                window4.close();
+                                window3.close();
+                                window2.close();
+                                window1.close();
+                            }
+                            if (button.text.getString() == "Parametres")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = true;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                            if (button.text.getString() == "Niveaux")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = false;
+                                isNiveaux = true;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                        }
                     }
                 }
             }
@@ -391,6 +458,7 @@ int main()
                         isParametre = false;
                         isNiveaux = false;
                         isChoosingDiff = false;
+                        isControles = false;
                     }
                 }
             }
@@ -399,21 +467,38 @@ int main()
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-                    if (diff.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    for (auto& button : settingsButtons)
                     {
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = false;
-                        isNiveaux = false;
-                        isChoosingDiff = true;
-                    }
-                    if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        isMainMenu = true;
-                        isCharacterSelection = false;
-                        isParametre = false;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
+                        if (button.shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        {
+                            if (button.text.getString() == "Difficulte")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = false;
+                                isNiveaux = false;
+                                isChoosingDiff = true;
+                                isControles = false;
+                            }
+                            if (button.text.getString() == "Controles")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = false;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = true;
+                            }
+                            if (button.text.getString() == "Retour")
+                            {
+                                isMainMenu = true;
+                                isCharacterSelection = false;
+                                isParametre = false;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                        }
                     }
                 }
             }
@@ -485,56 +570,70 @@ int main()
                 if (event4.type == sf::Event::MouseButtonPressed && event4.mouseButton.button == sf::Mouse::Left)
                 {
                     sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-                    if (normal.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    for (auto& button : diffButtons)
                     {
-                        niveauDifficulte = "Normal";
-                        std::cout << "Difficulte selectionne : Normal\n";
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = true;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
-                    }
-                    else if (difficile.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        niveauDifficulte = "Difficle";
-                        std::cout << "Difficulte selectionne : Difficile\n";
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = true;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
-                    }
-                    else if (hardcore.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        niveauDifficulte = "Hardcore";
-                        std::cout << "Difficulte selectionne : Hardcore\n";
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = true;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
-                    }
-                    else if (backButton.getGlobalBounds().contains(mousePos.x, mousePos.y))
-                    {
-                        isMainMenu = false;
-                        isCharacterSelection = false;
-                        isParametre = true;
-                        isNiveaux = false;
-                        isChoosingDiff = false;
+                        if (button.shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos)))
+                        {
+                            if (button.text.getString() == "Normal")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = true;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                            if (button.text.getString() == "Difficile")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = true;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                            if (button.text.getString() == "Hardcore")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = true;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                            }
+                        }
                     }
                 }
             }
+            else if (isControles)
+            {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) 
+                {
+                    isMainMenu = false;
+                    isCharacterSelection = false;
+                    isParametre = true;
+                    isNiveaux = false;
+                    isChoosingDiff = false;
+                    isControles = false;
+                }
+            }
         }
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
+        for (auto& button : mainButtons) 
+        {
+            button.update(mousePos);
+        }
+
         window4.clear();
 
         if (isMainMenu)
         {
             window4.draw(mainMenu);
-            window4.draw(start);
-            window4.draw(param);
-            window4.draw(niv);
-            window4.draw(quit);
+
+            for (auto& button : mainButtons)
+            {
+                button.draw(window4);
+            }
         }
         else if (isCharacterSelection)
         {
@@ -546,12 +645,10 @@ int main()
         else if (isParametre)
         {
             window4.draw(title3);
-            window4.draw(diff);
-            window4.draw(music);
-            window4.draw(video);
-            window4.draw(controls);
-            window4.draw(language);
-            window4.draw(backButton);
+            for (auto& button : settingsButtons)
+            {
+                button.draw(window4);
+            }
         }
         else if (isNiveaux)
         {
@@ -570,10 +667,14 @@ int main()
         else if (isChoosingDiff)
         {
             window4.draw(title5);
-            window4.draw(normal);
-            window4.draw(difficile);
-            window4.draw(hardcore);
-            window4.draw(backButton);
+            for (auto& button : diffButtons)
+            {
+                button.draw(window4);
+            }
+        }
+        else if (isControles)
+        {
+            window4.draw(controlsText);
         }
         window4.display();
     }
