@@ -1007,8 +1007,11 @@ int main()
 
     std::vector<Projectile> projectiles;
     std::vector<EnemyProjectile> enemyProjectiles;
+    sf::Clock spawnClock;
+    std::vector<sf::Clock> enemyShotClocks;
     float cooldownTime = 0.1f;
     float timeSinceLastShot = cooldownTime;
+    float spawnInterval = 3.0f;
 
     while (window3.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
@@ -1042,7 +1045,7 @@ int main()
                     sf::Vector2f direction = sf::Vector2f(mousePosition) - startPosition;
                     float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                     if (length > 0) direction /= length;
-                    projectiles.emplace_back(startPosition, direction);
+                    projectiles.emplace_back(persoActuel->getPosition(), direction);
                     timeSinceLastShot = 0.0f;
                 }
             }
@@ -1056,86 +1059,61 @@ int main()
                     if (closestEnemy != nullptr) {
                         // Créer 3 projectiles qui vont viser l'ennemi le plus proche
                         for (int i = 0; i < 3; ++i) {
-                            sf::Vector2f startPosition = persoActuel->getPosition();
                             sf::Vector2f ennemiPosition = closestEnemy->sprite.getPosition();
                             sf::Vector2f direction = ennemiPosition - startPosition;
                             float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                             if (length > 0) direction /= length;  // Normaliser la direction
-                            projectiles.emplace_back(startPosition, direction);
+                            projectiles.emplace_back(persoActuel->getPosition(), direction);
                         }
                     }
                 }
             }
         }
-        CheckProjectileCollisions(projectiles, ennemis);
-
-        if (persoActuel != nullptr) {  // Vérifier si persoChoisi est initialisé
-            for (auto& ennemi : ennemis) {
-                sf::Vector2f positionEnnemi = ennemi.sprite.getPosition();
-                sf::Vector2f positionPerso = persoActuel->getPosition();
-
-                sf::Vector2f direction = positionPerso - positionEnnemi;
-                float longueur = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-                direction /= longueur;
-
-                ennemi.sprite.move(direction * vitesseEnnemie * deltaTime);
-            }
-        }
-
-        for (auto& ennemi : ennemis) {
-            if (ennemi.animationClock.getElapsedTime().asSeconds() > frameDuration) {
-                ennemi.currentFrame = (ennemi.currentFrame + 1) % gifFramesEnnemi.size();
-                ennemi.sprite.setTexture(gifFramesEnnemi[ennemi.currentFrame]);
-                ennemi.animationClock.restart();
-            }
+        if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
+            Ennemi newEnemy;
+            newEnemy.sprite.setPosition(rand() % windowLargeur, rand() % windowHauteur); // Position aléatoire
+            ennemis.push_back(newEnemy);
+            enemyShotClocks.emplace_back();
+            spawnClock.restart();
         }
 
         for (std::size_t i = 0; i < ennemis.size(); ++i) {
-            if (enemyShotClocks[i].getElapsedTime().asSeconds() > 1.5f) { // Tir toutes les 1,5 secondes
+            sf::Vector2f direction = persoActuel->getPosition() - ennemis[i].sprite.getPosition();
+            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+            if (length > 0) direction /= length;
+
+            ennemis[i].sprite.move(direction * vitesseEnnemie * deltaTime);
+
+            if (enemyShotClocks[i].getElapsedTime().asSeconds() > 1.5f) {
                 sf::Vector2f startPosition = ennemis[i].sprite.getPosition();
-                sf::Vector2f direction = persoActuel->getPosition() - startPosition;
-                float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-                if (length > 0) direction /= length; // Normaliser la direction
-
-                // Ajouter le projectile ennemi
-                enemyProjectiles.emplace_back(startPosition, direction);
-
-                enemyShotClocks[i].restart(); // Redémarrer l'horloge de tir
+                sf::Vector2f shotDirection = persoActuel->getPosition() - startPosition;
+                float shotLength = std::sqrt(shotDirection.x * shotDirection.x + shotDirection.y * shotDirection.y);
+                if (shotLength > 0) shotDirection /= shotLength;
+                enemyProjectiles.emplace_back(startPosition, shotDirection);
+                enemyShotClocks[i].restart();
             }
-        }
 
-        if (persoActuel != nullptr) {
-            for (auto& ennemi : ennemis) {
-                sf::Vector2f direction = persoActuel->getPosition() - ennemi.sprite.getPosition();
-                float longueur = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-                direction /= longueur;
-                ennemi.sprite.move(direction * vitesseEnnemie * deltaTime);
+            if (ennemis[i].animationClock.getElapsedTime().asSeconds() > frameDuration) {
+                ennemis[i].currentFrame = (ennemis[i].currentFrame + 1) % gifFramesEnnemi.size();
+                ennemis[i].sprite.setTexture(gifFramesEnnemi[ennemis[i].currentFrame]);
+                ennemis[i].animationClock.restart();
             }
         }
 
         updateEnemyProjectiles(enemyProjectiles, deltaTime, windowLargeur, windowHauteur);
         checkEnemyProjectileCollisions(enemyProjectiles, *persoActuel);
 
-        for (const auto& proj : enemyProjectiles) window3.draw(proj.shape);
-
-        for (auto& ennemi : ennemis) {
-            if (ennemi.animationClock.getElapsedTime().asSeconds() > frameDuration) {
-                ennemi.currentFrame = (ennemi.currentFrame + 1) % gifFramesEnnemi.size();
-                ennemi.sprite.setTexture(gifFramesEnnemi[ennemi.currentFrame]);
-                ennemi.animationClock.restart();
-            }
-        }
+        enemyProjectiles.erase(std::remove_if(enemyProjectiles.begin(), enemyProjectiles.end(), [&](const Projectile& proj) {
+            return proj.shape.getPosition().x < 0 || proj.shape.getPosition().x > windowLargeur ||
+                proj.shape.getPosition().y < 0 || proj.shape.getPosition().y > windowHauteur;
+            }), enemyProjectiles.end());
 
         window3.clear();
         window3.draw(fond1);
         window3.draw(*persoActuel);
-        for (const auto& ennemi : ennemis) window4.draw(ennemi.sprite);
-        for (auto& proj : projectiles) {
-            window3.draw(proj.shape);
-        }
-        for (const auto& proj : enemyProjectiles) {
-            window3.draw(proj.shape);
-        }
+        for (const auto& ennemi : ennemis) window3.draw(ennemi.sprite);
+        for (const auto& proj : projectiles) window3.draw(proj.shape);
+        for (const auto& proj : enemyProjectiles) window3.draw(proj.shape);
         window3.display();
     }
 
