@@ -5,7 +5,209 @@
 #include <cmath> // Pour std::abs
 int windowHauteur = 1080;
 int windowLargeur = 1920;
+float vitesseEnnemie = 50.0f;
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
+
+struct Projectile {
+    sf::RectangleShape shape;
+    sf::Vector2f velocity;
+
+    Projectile(sf::Vector2f startPosition, sf::Vector2f direction) {
+        shape.setSize(sf::Vector2f(10.0f, 10.0f));
+        shape.setFillColor(sf::Color::Red);
+        shape.setPosition(startPosition);
+        velocity = direction * 2.0f;
+    }
+
+    void update(float deltaTime) {
+        shape.move(velocity * deltaTime);
+    }
+
+    bool isOffScreen(int windowWidth, int windowHeight) {
+        sf::Vector2f pos = shape.getPosition();
+        return pos.x < 0 || pos.x > windowWidth || pos.y < 0 || pos.y > windowHeight;
+    }
+};
+
+struct EnemyProjectile {
+    sf::RectangleShape shape;
+    sf::Vector2f velocity;
+
+    EnemyProjectile(sf::Vector2f startPosition, sf::Vector2f direction)
+    {
+        shape.setSize(sf::Vector2f(10.0f, 10.0f));
+        shape.setFillColor(sf::Color::Red);
+        shape.setPosition(startPosition);
+        velocity = direction * 2.0f;
+    }
+
+    void update(float deltaTime) {
+        shape.move(velocity * deltaTime);
+    }
+
+    bool isOffScreen(int windowWidth, int windowHeight) {
+        sf::Vector2f pos = shape.getPosition();
+        return pos.x < 0 || pos.x > windowWidth || pos.y < 0 || pos.y > windowHeight;
+    }
+};
+
+std::vector<Projectile> projectiles;
+std::vector<EnemyProjectile> enemyProjectiles;
+sf::Vector2f startPosition(100.0f, 100.0f);
+sf::Vector2f direction(1.0f, 0.0f);
+
+struct Ennemi {
+    sf::Sprite sprite;
+    sf::Clock animationClock; // Horloge pour l'animation
+    std::size_t currentFrame; // Frame actuelle
+    int health = 5; // Points de vie de l'ennemi (3 tirs pour le tuer)
+};
+
+int ennemiesKilled = 0;
+
+void respawnEnnemi(Ennemi& ennemi, int windowWidth, int windowHeight) {
+    int side = rand() % 4; // 0: gauche, 1: droite, 2: haut, 3: bas
+    float x, y;
+    if (side == 0) { // Gauche
+        x = -50.0f;
+        y = rand() % windowHeight;
+    }
+    else if (side == 1) { // Droite
+        x = windowWidth + 50.0f;
+        y = rand() % windowHeight;
+    }
+    else if (side == 2) { // Haut
+        x = rand() % windowWidth;
+        y = -50.0f;
+    }
+    else { // Bas
+        x = rand() % windowWidth;
+        y = windowHeight + 50.0f;
+    }
+    ennemi.sprite.setPosition(x, y);
+    ennemi.health = 5; // Réinitialiser la santé
+}
+
+void checkEnemyProjectileCollisions(std::vector<EnemyProjectile>& enemyProjectiles, sf::Sprite& player) {
+    for (auto& proj : enemyProjectiles) {
+        if (proj.shape.getGlobalBounds().intersects(player.getGlobalBounds())) {
+            std::cout << "Le joueur a été touché !\n";
+            proj.shape.setPosition(-100, -100); // Marquer pour suppression
+        }
+    }
+}
+
+void updateEnemyProjectiles(std::vector<EnemyProjectile>& enemyProjectiles, float deltaTime, int windowWidth, int windowHeight) {
+    for (auto& proj : projectiles) {
+        proj.update(deltaTime);
+    }
+    projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
+        [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
+        projectiles.end());
+}
+
+Ennemi* findClosestEnemy(const sf::Sprite& player, std::vector<Ennemi>& ennemis) {
+    Ennemi* closestEnemy = nullptr;
+    float closestDistance = std::numeric_limits<float>::max();
+
+    for (auto& ennemi : ennemis) {
+        sf::Vector2f playerPos = player.getPosition();
+        sf::Vector2f ennemiPos = ennemi.sprite.getPosition();
+        float distance = std::sqrt(std::pow(ennemiPos.x - playerPos.x, 2) + std::pow(ennemiPos.y - playerPos.y, 2));
+
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestEnemy = &ennemi;
+        }
+    }
+
+    return closestEnemy;
+}
+
+void CheckProjectileCollisions(std::vector<Projectile>& projectiles, std::vector<Ennemi>& ennemis) {
+    for (auto& projectile : projectiles) {
+        for (auto& ennemi : ennemis) {
+            if (projectile.shape.getGlobalBounds().intersects(ennemi.sprite.getGlobalBounds())) {
+                ennemi.health--;
+
+                projectile.shape.setPosition(-100, -100); // Détruire le projectile
+                if (ennemi.health <= 0) {
+                    ennemiesKilled++;
+                    if (ennemiesKilled >= 30) {
+                        ennemis.clear(); // Supprimer tous les ennemis
+                    }
+                    else {
+                        respawnEnnemi(ennemi, windowLargeur, windowHauteur); // Réapparaître l'ennemi
+                    }
+                }
+            }
+        }
+    }
+    // Supprimer les projectiles hors écran
+    projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
+        [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
+        projectiles.end());
+}
+
+float clamp(float value, float min, float max) {
+    return (value < min) ? min : (value > max ? max : value);
+}
+
+class Slider {
+public:
+    Slider(float x, float y, float width, float height, float initialValue = 0.0f) {
+        bar.setSize(sf::Vector2f(width, height));
+        bar.setFillColor(sf::Color::White);
+        bar.setPosition(x, y);
+
+        knob.setRadius(height / 2);
+        knob.setFillColor(sf::Color::Red);
+        knob.setOrigin(knob.getRadius(), knob.getRadius());
+
+        // Position initiale du bouton
+        this->x = x;
+        this->y = y;
+        this->width = width;
+        this->height = height;
+
+        float initialX = x + (initialValue / 100.0f) * width;
+        knob.setPosition(initialX, y + height / 2);
+    }
+
+    void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
+        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+            if (knob.getGlobalBounds().contains(window.mapPixelToCoords({ event.mouseButton.x, event.mouseButton.y }))) {
+                dragging = true;
+            }
+        }
+        else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+            dragging = false;
+        }
+
+        if (dragging && event.type == sf::Event::MouseMoved) {
+            float mouseX = window.mapPixelToCoords({ event.mouseMove.x, event.mouseMove.y }).x;
+            float newX = clamp(mouseX, x, x + width);
+            knob.setPosition(newX, y + height / 2);
+        }
+    }
+
+    float getValue() const {
+        return (knob.getPosition().x - x) / width * 100.0f; // Retourne la valeur entre 0 et 100
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(bar);
+        window.draw(knob);
+    }
+
+private:
+    sf::RectangleShape bar;
+    sf::CircleShape knob;
+    float x, y, width, height;
+    bool dragging = false;
+};
+
+
 
 struct Button {
     sf::RectangleShape shape;
@@ -60,26 +262,7 @@ struct LevelObject
     std::string type;
 };
 
-struct Projectile {
-    sf::RectangleShape shape;
-    sf::Vector2f velocity;
 
-    Projectile(sf::Vector2f startPosition, sf::Vector2f direction) {
-        shape.setSize(sf::Vector2f(10.0f, 10.0f));
-        shape.setFillColor(sf::Color::Red);
-        shape.setPosition(startPosition);
-        velocity = direction * 2.0f;
-    }
-
-    void update(float deltaTime) {
-        shape.move(velocity * deltaTime);
-    }
-
-    bool isOffScreen(int windowWidth, int windowHeight) {
-        sf::Vector2f pos = shape.getPosition();
-        return pos.x < 0 || pos.x > windowWidth || pos.y < 0 || pos.y > windowHeight;
-    }
-};
 
 int main()
 {
@@ -87,6 +270,49 @@ int main()
     sf::RenderWindow window2(sf::VideoMode(windowLargeur, windowHauteur), "niveau 2");
     sf::RenderWindow window3(sf::VideoMode(windowLargeur, windowHauteur), "niveau 1");
     sf::RenderWindow window4(sf::VideoMode(windowLargeur, windowHauteur), "Menu");
+
+    Slider effectsSlider(200, 200, 400, 10, 0.0f);
+    Slider musicSlider(200, 300, 400, 10, 0.0f);
+    Slider ambientSlider(200, 400, 400, 10, 0.0f);
+
+    sf::SoundBuffer buffer;
+    if (!buffer.loadFromFile("assets/nature.wav")) {
+        std::cerr << "Erreur lors du chargement du son d'effet\n";
+        return -1;
+    }
+    sf::Sound ambientSound;
+    ambientSound.setBuffer(buffer);
+    ambientSound.setLoop(true);
+    ambientSound.setVolume(0);
+
+    sf::SoundBuffer buffer2;
+    if (!buffer2.loadFromFile("assets/runners_sound.wav")) {
+        std::cerr << "Erreur lors du chargement du son d'effet\n";
+        return -1;
+    }
+    sf::Sound effectSound;
+    effectSound.setBuffer(buffer2);
+    effectSound.setLoop(true);
+    effectSound.setVolume(0);
+
+    sf::SoundBuffer buffer3;
+    if (!buffer3.loadFromFile("assets/stalkers_sound.wav")) {
+        std::cerr << "Erreur lors du chargement du son d'effet\n";
+        return -1;
+    }
+    sf::Sound effectSound2;
+    effectSound2.setBuffer(buffer3);
+    effectSound2.setLoop(true);
+    effectSound2.setVolume(0);
+
+    sf::Music music;
+    if (!music.openFromFile("assets/electro.ogg")) {
+        std::cerr << "Erreur lors du chargement de la musique\n";
+        return -1;
+    }
+    music.setVolume(0);
+    music.setLoop(true);
+    
 
     sf::Font font;
     if (!font.loadFromFile("assets/arial.ttf"))
@@ -115,9 +341,8 @@ int main()
     const float settingsStartY = 300;
     settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY), sf::Vector2f(buttonWidth, buttonHeight), "Difficulte", font);
     settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + buttonHeight + spacing), sf::Vector2f(buttonWidth, buttonHeight), "Musique", font);
-    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 2 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Video", font);
-    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 3 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Controles", font);
-    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 4 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Retour", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 2 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Controles", font);
+    settingsButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY + 3 * (buttonHeight + spacing)), sf::Vector2f(buttonWidth, buttonHeight), "Retour", font);
 
     const float diffStartY = 300;
     diffButtons.emplace_back(sf::Vector2f((1920 - buttonWidth) / 2, settingsStartY), sf::Vector2f(buttonWidth, buttonHeight), "Normal", font);
@@ -140,6 +365,41 @@ int main()
     );
     controlsText.setPosition(100, 200);
 
+    sf::Text musiqueText;
+    musiqueText.setFont(font);
+    musiqueText.setCharacterSize(24);
+    musiqueText.setFillColor(sf::Color::White);
+    musiqueText.setString(
+        "Effets :\n\n\n"
+        "Musique : \n\n\n\n"
+        "Ambiance : "
+    );
+    musiqueText.setPosition(50, 185);
+
+    std::vector<sf::Texture> gifFramesEnnemi;
+    for (int i = 1; i <= 4; ++i) {
+        sf::Texture texture;
+        if (!texture.loadFromFile("assets/ennemis/runners" + std::to_string(i) + ".png")) {
+            std::cerr << "Erreur de chargement de l'image frame" + std::to_string(i) + ".png\n";
+            return -1;
+        }
+        gifFramesEnnemi.push_back(texture);
+    }
+
+    sf::Clock clock, frameClock;
+    float frameDuration = 0.1f; // Durée de chaque frame en secondes
+    std::size_t currentFrame = 0;
+    sf::Sprite sprite;
+
+    std::vector<Ennemi> ennemis;
+    for (int i = 0; i < 5; ++i) {
+        Ennemi ennemi;
+        ennemi.sprite.setTexture(gifFramesEnnemi[0]); // Initialiser avec la première frame
+        ennemi.sprite.setPosition(rand() % windowLargeur, rand() % windowHauteur);
+        ennemi.currentFrame = 0;
+        ennemis.push_back(ennemi);
+    }
+
     sf::Texture perso1Texture;
     if (!perso1Texture.loadFromFile("assets/Ellie.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
@@ -158,6 +418,10 @@ int main()
     perso2.setPosition(1000, 250);
     sf::Vector2f perso2Position = perso2.getPosition();
 
+    float timeSinceLastShot = 0.0f;
+    const float cooldownTime = 0.5f;
+    std::vector<sf::Clock> enemyShotClocks(ennemis.size());
+
     sf::Sprite* persoChoisis = nullptr;
 
     sf::Text backButton("Retour", font, 50);
@@ -168,51 +432,6 @@ int main()
 
     sf::Text title3("Parametres", font, 50);
     title3.setPosition(830, 170);
-
-    sf::Texture diffTexture;
-    if (!diffTexture.loadFromFile("assets/diff.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite diff(diffTexture);
-    diff.setPosition(650, -30);
-    sf::Vector2f diffPosition = diff.getPosition();
-
-    sf::Texture musicTexture;
-    if (!musicTexture.loadFromFile("assets/music.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite music(musicTexture);
-    music.setPosition(650, 130);
-    sf::Vector2f musicPosition = music.getPosition();
-
-    sf::Texture videoTexture;
-    if (!videoTexture.loadFromFile("assets/video.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite video(videoTexture);
-    video.setPosition(650, 290);
-    sf::Vector2f videoPosition = video.getPosition();
-
-    sf::Texture controlsTexture;
-    if (!controlsTexture.loadFromFile("assets/controls.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite controls(controlsTexture);
-    controls.setPosition(650, 450);
-    sf::Vector2f controlsPosition = controls.getPosition();
-
-    sf::Texture languageTexture;
-    if (!languageTexture.loadFromFile("assets/language.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite language(languageTexture);
-    language.setPosition(650, 610);
-    sf::Vector2f languagePosition = language.getPosition();
 
     sf::Text title4("Niveaux", font, 50);
     title4.setPosition(850, 50);
@@ -291,7 +510,13 @@ int main()
     bool isNiveaux = false;
     bool isChoosingDiff = false;
     bool isControles = false;
+    bool isMusique = false;
     bool isDragging = false;
+    bool ambientPlaying = false;
+    bool musicPlaying = false;
+    bool effectPlaying = false;
+    bool effectPlaying2 = false;
+    bool isRunners = false;
 
     sf::Texture persoETexture;
     if (!persoETexture.loadFromFile("assets/Ellie.png")) {
@@ -372,8 +597,6 @@ int main()
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
-    sf::Vector2i startPos;
-
     while (window4.isOpen())
     {
         sf::Event event4;
@@ -404,6 +627,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                             if (button.text.getString() == "Quitter")
                             {
@@ -420,6 +644,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                             if (button.text.getString() == "Niveaux")
                             {
@@ -429,6 +654,7 @@ int main()
                                 isNiveaux = true;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                         }
                     }
@@ -459,6 +685,7 @@ int main()
                         isNiveaux = false;
                         isChoosingDiff = false;
                         isControles = false;
+                        isMusique = false;
                     }
                 }
             }
@@ -479,6 +706,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = true;
                                 isControles = false;
+                                isMusique = false;
                             }
                             if (button.text.getString() == "Controles")
                             {
@@ -488,6 +716,17 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = true;
+                                isMusique = false;
+                            }
+                            if (button.text.getString() == "Musique")
+                            {
+                                isMainMenu = false;
+                                isCharacterSelection = false;
+                                isParametre = false;
+                                isNiveaux = false;
+                                isChoosingDiff = false;
+                                isControles = false;
+                                isMusique = true;
                             }
                             if (button.text.getString() == "Retour")
                             {
@@ -497,6 +736,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                         }
                     }
@@ -549,6 +789,7 @@ int main()
                         isParametre = false;
                         isNiveaux = false;
                         isChoosingDiff = false;
+                        isMusique = false;
                     }
                 }
                 if (event4.type == sf::Event::MouseButtonReleased && event4.mouseButton.button == sf::Mouse::Left)
@@ -582,6 +823,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                             if (button.text.getString() == "Difficile")
                             {
@@ -591,6 +833,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                             if (button.text.getString() == "Hardcore")
                             {
@@ -600,6 +843,7 @@ int main()
                                 isNiveaux = false;
                                 isChoosingDiff = false;
                                 isControles = false;
+                                isMusique = false;
                             }
                         }
                     }
@@ -615,6 +859,69 @@ int main()
                     isNiveaux = false;
                     isChoosingDiff = false;
                     isControles = false;
+                    isMusique = false;
+                }
+            }
+            else if (isMusique)
+            {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+                {
+                    isMainMenu = false;
+                    isCharacterSelection = false;
+                    isParametre = true;
+                    isNiveaux = false;
+                    isChoosingDiff = false;
+                    isControles = false;
+                    isMusique = false;
+                }
+
+                effectsSlider.handleEvent(event4, window4);
+                musicSlider.handleEvent(event4, window4);
+                ambientSlider.handleEvent(event4, window4);
+
+                float ambientVolume = ambientSlider.getValue();
+                float musicVolume = musicSlider.getValue();
+                float effectVolume = effectsSlider.getValue();
+                float effectVolume2 = effectsSlider.getValue();
+
+                ambientSound.setVolume(ambientVolume);
+                if (ambientVolume > 0 && !ambientPlaying) {
+                    ambientSound.play();
+                    ambientPlaying = true;
+                }
+                else if (ambientVolume == 0 && ambientPlaying) {
+                    ambientSound.stop();
+                    ambientPlaying = false;
+                }
+
+                effectSound.setVolume(effectVolume);
+                if (effectVolume > 0 && !effectPlaying) {
+                    effectSound.play();
+                    effectPlaying = true;
+                }
+                else if (effectVolume == 0 && effectPlaying) {
+                    effectSound.stop();
+                    effectPlaying = false;
+                }
+
+                effectSound2.setVolume(effectVolume2);
+                if (effectVolume2 > 0 && !effectPlaying2) {
+                    effectSound2.play();
+                    effectPlaying2 = true;
+                }
+                else if (effectVolume2 == 0 && effectPlaying2) {
+                    effectSound2.stop();
+                    effectPlaying2 = false;
+                }
+
+                music.setVolume(musicVolume);
+                if (musicVolume > 0 && !musicPlaying) {
+                    music.play();
+                    musicPlaying = true;
+                }
+                else if (musicVolume == 0 && musicPlaying) {
+                    music.pause();
+                    musicPlaying = false;
                 }
             }
         }
@@ -676,6 +983,13 @@ int main()
         {
             window4.draw(controlsText);
         }
+        else if (isMusique)
+        {
+            window4.draw(musiqueText);
+            effectsSlider.draw(window4);
+            musicSlider.draw(window4);
+            ambientSlider.draw(window4);
+        }
         window4.display();
     }
 
@@ -692,10 +1006,12 @@ int main()
     }
 
     std::vector<Projectile> projectiles;
+    std::vector<EnemyProjectile> enemyProjectiles;
     float cooldownTime = 0.1f;
     float timeSinceLastShot = cooldownTime;
 
     while (window3.isOpen()) {
+        float deltaTime = clock.restart().asSeconds();
         sf::Event event3;
         while (window3.pollEvent(event3))
         {
@@ -706,13 +1022,14 @@ int main()
                 window1.close();
             }
 
+            float speed = 300.0f;
             if (event3.type == sf::Event::KeyPressed)
             {
                 if (event3.key.code == sf::Keyboard::Enter) window3.close();
-                if (event3.key.code == sf::Keyboard::Q) persoActuel->move(-5.0f, 0.0f);
-                if (event3.key.code == sf::Keyboard::D) persoActuel->move(5.0f, 0.0f);
-                if (event3.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -5.0f);
-                if (event3.key.code == sf::Keyboard::S) persoActuel->move(0.0f, 5.0f);
+                if (event3.key.code == sf::Keyboard::Q) persoActuel->move(-speed * deltaTime, 0.0f);
+                if (event3.key.code == sf::Keyboard::D) persoActuel->move(speed * deltaTime, 0.0f);
+                if (event3.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -speed * deltaTime);
+                if (event3.key.code == sf::Keyboard::S) persoActuel->move(0.0f, speed * deltaTime);
                 /*if (event3.key.code == sf::Keyboard::A)
                 if (event3.key.code == sf::Keyboard::E)*/
             }
@@ -721,34 +1038,102 @@ int main()
             {
                 if (event3.mouseButton.button == sf::Mouse::Left && timeSinceLastShot >= cooldownTime)
                 {
-                    sf::Vector2f direction(1.0f, 0.0f);
-                    projectiles.emplace_back(persoActuel->getPosition(), direction);
+                    sf::Vector2i mousePosition = sf::Mouse::getPosition(window3);
+                    sf::Vector2f direction = sf::Vector2f(mousePosition) - startPosition;
+                    float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                    if (length > 0) direction /= length;
+                    projectiles.emplace_back(startPosition, direction);
                     timeSinceLastShot = 0.0f;
                 }
             }
 
-            /*if (event3.type == sf::Event::MouseButtonPressed)
+            if (event3.type == sf::Event::MouseButtonPressed)
             {
                 if (event3.mouseButton.button == sf::Mouse::Right)
                 {
+                    Ennemi* closestEnemy = findClosestEnemy(*persoActuel, ennemis);
 
+                    if (closestEnemy != nullptr) {
+                        // Créer 3 projectiles qui vont viser l'ennemi le plus proche
+                        for (int i = 0; i < 3; ++i) {
+                            sf::Vector2f startPosition = persoActuel->getPosition();
+                            sf::Vector2f ennemiPosition = closestEnemy->sprite.getPosition();
+                            sf::Vector2f direction = ennemiPosition - startPosition;
+                            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                            if (length > 0) direction /= length;  // Normaliser la direction
+                            projectiles.emplace_back(startPosition, direction);
+                        }
+                    }
                 }
-            }*/
+            }
         }
-        float deltaTime = 0.1f;
-        timeSinceLastShot += deltaTime;
+        CheckProjectileCollisions(projectiles, ennemis);
 
-        for (auto& proj : projectiles) {
-            proj.update(deltaTime);
+        if (persoActuel != nullptr) {  // Vérifier si persoChoisi est initialisé
+            for (auto& ennemi : ennemis) {
+                sf::Vector2f positionEnnemi = ennemi.sprite.getPosition();
+                sf::Vector2f positionPerso = persoActuel->getPosition();
+
+                sf::Vector2f direction = positionPerso - positionEnnemi;
+                float longueur = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                direction /= longueur;
+
+                ennemi.sprite.move(direction * vitesseEnnemie * deltaTime);
+            }
         }
-        projectiles.erase(std::remove_if(projectiles.begin(), projectiles.end(),
-            [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
-            projectiles.end());
+
+        for (auto& ennemi : ennemis) {
+            if (ennemi.animationClock.getElapsedTime().asSeconds() > frameDuration) {
+                ennemi.currentFrame = (ennemi.currentFrame + 1) % gifFramesEnnemi.size();
+                ennemi.sprite.setTexture(gifFramesEnnemi[ennemi.currentFrame]);
+                ennemi.animationClock.restart();
+            }
+        }
+
+        for (std::size_t i = 0; i < ennemis.size(); ++i) {
+            if (enemyShotClocks[i].getElapsedTime().asSeconds() > 1.5f) { // Tir toutes les 1,5 secondes
+                sf::Vector2f startPosition = ennemis[i].sprite.getPosition();
+                sf::Vector2f direction = persoActuel->getPosition() - startPosition;
+                float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                if (length > 0) direction /= length; // Normaliser la direction
+
+                // Ajouter le projectile ennemi
+                enemyProjectiles.emplace_back(startPosition, direction);
+
+                enemyShotClocks[i].restart(); // Redémarrer l'horloge de tir
+            }
+        }
+
+        if (persoActuel != nullptr) {
+            for (auto& ennemi : ennemis) {
+                sf::Vector2f direction = persoActuel->getPosition() - ennemi.sprite.getPosition();
+                float longueur = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                direction /= longueur;
+                ennemi.sprite.move(direction * vitesseEnnemie * deltaTime);
+            }
+        }
+
+        updateEnemyProjectiles(enemyProjectiles, deltaTime, windowLargeur, windowHauteur);
+        checkEnemyProjectileCollisions(enemyProjectiles, *persoActuel);
+
+        for (const auto& proj : enemyProjectiles) window3.draw(proj.shape);
+
+        for (auto& ennemi : ennemis) {
+            if (ennemi.animationClock.getElapsedTime().asSeconds() > frameDuration) {
+                ennemi.currentFrame = (ennemi.currentFrame + 1) % gifFramesEnnemi.size();
+                ennemi.sprite.setTexture(gifFramesEnnemi[ennemi.currentFrame]);
+                ennemi.animationClock.restart();
+            }
+        }
 
         window3.clear();
         window3.draw(fond1);
         window3.draw(*persoActuel);
+        for (const auto& ennemi : ennemis) window4.draw(ennemi.sprite);
         for (auto& proj : projectiles) {
+            window3.draw(proj.shape);
+        }
+        for (const auto& proj : enemyProjectiles) {
             window3.draw(proj.shape);
         }
         window3.display();
@@ -857,7 +1242,7 @@ int main()
             {
                 if (event1.mouseButton.button == sf::Mouse::Right)
                 {
-
+                    
                 }
             }*/
         }
