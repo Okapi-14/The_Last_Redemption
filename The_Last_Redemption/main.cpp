@@ -59,7 +59,7 @@ sf::Vector2f direction(1.0f, 0.0f);
 struct Ennemi {
     sf::Sprite sprite;
     sf::Clock animationClock; // Horloge pour l'animation
-    std::size_t currentFrame; // Frame actuelle
+    std::size_t currentFrame = 0; // Frame actuelle
     int health = 5; // Points de vie de l'ennemi (3 tirs pour le tuer)
 };
 
@@ -275,7 +275,7 @@ int main()
     Slider musicSlider(200, 300, 400, 10, 0.0f);
     Slider ambientSlider(200, 400, 400, 10, 0.0f);
 
-    sf::SoundBuffer buffer;
+    /*sf::SoundBuffer buffer;
     if (!buffer.loadFromFile("assets/nature.wav")) {
         std::cerr << "Erreur lors du chargement du son d'effet\n";
         return -1;
@@ -312,7 +312,7 @@ int main()
     }
     music.setVolume(0);
     music.setLoop(true);
-    
+    */
 
     sf::Font font;
     if (!font.loadFromFile("assets/arial.ttf"))
@@ -417,10 +417,6 @@ int main()
     sf::Sprite perso2(perso2Texture);
     perso2.setPosition(1000, 250);
     sf::Vector2f perso2Position = perso2.getPosition();
-
-    float timeSinceLastShot = 0.0f;
-    const float cooldownTime = 0.5f;
-    std::vector<sf::Clock> enemyShotClocks(ennemis.size());
 
     sf::Sprite* persoChoisis = nullptr;
 
@@ -884,7 +880,7 @@ int main()
                 float effectVolume = effectsSlider.getValue();
                 float effectVolume2 = effectsSlider.getValue();
 
-                ambientSound.setVolume(ambientVolume);
+                /*ambientSound.setVolume(ambientVolume);
                 if (ambientVolume > 0 && !ambientPlaying) {
                     ambientSound.play();
                     ambientPlaying = true;
@@ -922,7 +918,7 @@ int main()
                 else if (musicVolume == 0 && musicPlaying) {
                     music.pause();
                     musicPlaying = false;
-                }
+                }*/
             }
         }
         sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
@@ -1009,7 +1005,7 @@ int main()
     std::vector<EnemyProjectile> enemyProjectiles;
     sf::Clock spawnClock;
     std::vector<sf::Clock> enemyShotClocks;
-    float cooldownTime = 0.1f;
+    float cooldownTime = 0.5f;
     float timeSinceLastShot = cooldownTime;
     float spawnInterval = 3.0f;
 
@@ -1025,14 +1021,13 @@ int main()
                 window1.close();
             }
 
-            float speed = 300.0f;
             if (event3.type == sf::Event::KeyPressed)
             {
                 if (event3.key.code == sf::Keyboard::Enter) window3.close();
-                if (event3.key.code == sf::Keyboard::Q) persoActuel->move(-speed * deltaTime, 0.0f);
-                if (event3.key.code == sf::Keyboard::D) persoActuel->move(speed * deltaTime, 0.0f);
-                if (event3.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -speed * deltaTime);
-                if (event3.key.code == sf::Keyboard::S) persoActuel->move(0.0f, speed * deltaTime);
+                if (event3.key.code == sf::Keyboard::Q) persoActuel->move(-5.0f, 0.0f);
+                if (event3.key.code == sf::Keyboard::D) persoActuel->move(5.0f, 0.0f);
+                if (event3.key.code == sf::Keyboard::Z) persoActuel->move(0.0f, -5.0f);
+                if (event3.key.code == sf::Keyboard::S) persoActuel->move(0.0f, 5.0f);
                 /*if (event3.key.code == sf::Keyboard::A)
                 if (event3.key.code == sf::Keyboard::E)*/
             }
@@ -1077,23 +1072,35 @@ int main()
             spawnClock.restart();
         }
 
-        for (std::size_t i = 0; i < ennemis.size(); ++i) {
+        for (std::size_t i = 0; i < ennemis.size(); ++i)
+        {
+            // Vérifier la validité du pointeur persoActuel
+            if (!persoActuel) {
+                std::cerr << "Erreur : persoActuel est nul !" << std::endl;
+                continue;
+            }
+
+            // Calcul direction entre persoActuel et l'ennemi
             sf::Vector2f direction = persoActuel->getPosition() - ennemis[i].sprite.getPosition();
             float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
             if (length > 0) direction /= length;
 
             ennemis[i].sprite.move(direction * vitesseEnnemie * deltaTime);
 
-            if (enemyShotClocks[i].getElapsedTime().asSeconds() > 1.5f) {
+            // Tir des projectiles
+            if (i < enemyShotClocks.size() && enemyShotClocks[i].getElapsedTime().asSeconds() > 1.5f)
+            {
                 sf::Vector2f startPosition = ennemis[i].sprite.getPosition();
                 sf::Vector2f shotDirection = persoActuel->getPosition() - startPosition;
                 float shotLength = std::sqrt(shotDirection.x * shotDirection.x + shotDirection.y * shotDirection.y);
                 if (shotLength > 0) shotDirection /= shotLength;
+
                 enemyProjectiles.emplace_back(startPosition, shotDirection);
                 enemyShotClocks[i].restart();
             }
 
-            if (ennemis[i].animationClock.getElapsedTime().asSeconds() > frameDuration) {
+            // Animation
+            if (i < gifFramesEnnemi.size() && ennemis[i].animationClock.getElapsedTime().asSeconds() > frameDuration) {
                 ennemis[i].currentFrame = (ennemis[i].currentFrame + 1) % gifFramesEnnemi.size();
                 ennemis[i].sprite.setTexture(gifFramesEnnemi[ennemis[i].currentFrame]);
                 ennemis[i].animationClock.restart();
@@ -1103,7 +1110,7 @@ int main()
         updateEnemyProjectiles(enemyProjectiles, deltaTime, windowLargeur, windowHauteur);
         checkEnemyProjectileCollisions(enemyProjectiles, *persoActuel);
 
-        enemyProjectiles.erase(std::remove_if(enemyProjectiles.begin(), enemyProjectiles.end(), [&](const Projectile& proj) {
+        enemyProjectiles.erase(std::remove_if(enemyProjectiles.begin(), enemyProjectiles.end(), [&](const EnemyProjectile& proj) {
             return proj.shape.getPosition().x < 0 || proj.shape.getPosition().x > windowLargeur ||
                 proj.shape.getPosition().y < 0 || proj.shape.getPosition().y > windowHauteur;
             }), enemyProjectiles.end());
