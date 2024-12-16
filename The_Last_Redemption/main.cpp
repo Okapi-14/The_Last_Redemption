@@ -7,6 +7,7 @@ int windowHauteur = 1080;
 int windowLargeur = 1920;
 float vitesseEnnemie = 50.0f;
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
+const float SPEED = 0.05f;
 
 struct Projectile {
     sf::RectangleShape shape;
@@ -275,7 +276,7 @@ int main()
     Slider musicSlider(200, 300, 400, 10, 0.0f);
     Slider ambientSlider(200, 400, 400, 10, 0.0f);
 
-    /*sf::SoundBuffer buffer;
+    sf::SoundBuffer buffer;
     if (!buffer.loadFromFile("assets/nature.wav")) {
         std::cerr << "Erreur lors du chargement du son d'effet\n";
         return -1;
@@ -312,7 +313,6 @@ int main()
     }
     music.setVolume(0);
     music.setLoop(true);
-    */
 
     sf::Font font;
     if (!font.loadFromFile("assets/arial.ttf"))
@@ -446,60 +446,6 @@ int main()
 
     std::string niveauDifficulte = "Normal";
 
-    sf::Texture normalTexture;
-    if (!normalTexture.loadFromFile("assets/normal.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite normal(normalTexture);
-    normal.setPosition(650, -30);
-    sf::Vector2f normalPosition = normal.getPosition();
-
-    sf::Texture difficileTexture;
-    if (!difficileTexture.loadFromFile("assets/difficile.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite difficile(difficileTexture);
-    difficile.setPosition(650, 200);
-    sf::Vector2f difficilePosition = difficile.getPosition();
-
-    sf::Texture hardcoreTexture;
-    if (!hardcoreTexture.loadFromFile("assets/hardcore.png")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite hardcore(hardcoreTexture);
-    hardcore.setPosition(650, 430);
-    sf::Vector2f hardcorePosition = hardcore.getPosition();
-
-    sf::Texture niv1Texture;
-    if (!niv1Texture.loadFromFile("assets/niv1.gif")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite niv1(niv1Texture);
-    niv1.setPosition(400, 350);
-    sf::Vector2f niv1Position = niv1.getPosition();
-
-    sf::Texture niv2Texture;
-    if (!niv2Texture.loadFromFile("assets/niv2.gif")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite niv2(niv2Texture);
-    niv2.setPosition(770, 350);
-    sf::Vector2f niv2Position = niv2.getPosition();
-
-    sf::Texture niv3Texture;
-    if (!niv3Texture.loadFromFile("assets/niv3.gif")) {
-        std::cout << "Erreur de chargement de l'image!" << std::endl;
-        return -1;
-    }
-    sf::Sprite niv3(niv3Texture);
-    niv3.setPosition(1150, 350);
-    sf::Vector2f niv3Position = niv3.getPosition();
-
     bool isMainMenu = true;
     bool isCharacterSelection = false;
     bool isParametre = false;
@@ -570,21 +516,27 @@ int main()
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite fond1(fond1Texture);
+    sf::Sprite fond1(fond1Texture), fond1bis(fond1Texture);
+    fond1.setPosition(0, 0);
+    fond1bis.setPosition(windowLargeur, 0);
 
     sf::Texture fond2Texture;
     if (!fond2Texture.loadFromFile("assets/map2.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite fond2(fond2Texture);
+    sf::Sprite fond2(fond2Texture), fond2bis(fond2Texture);
+    fond2.setPosition(0, 0);
+    fond2bis.setPosition(windowLargeur, 0);
 
     sf::Texture fond3Texture;
     if (!fond3Texture.loadFromFile("assets/map3.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite fond3(fond3Texture);
+    sf::Sprite fond3(fond3Texture), fond3bis(fond3Texture);
+    fond3.setPosition(0, 0);
+    fond3bis.setPosition(windowLargeur, 0);
 
     sf::Texture mainMenuTexture;
     if (!mainMenuTexture.loadFromFile("assets/mainMenu.png")) {
@@ -847,7 +799,7 @@ int main()
             }
             else if (isControles)
             {
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) 
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
                 {
                     isMainMenu = false;
                     isCharacterSelection = false;
@@ -922,7 +874,7 @@ int main()
             }
         }
         sf::Vector2i mousePos = sf::Mouse::getPosition(window4);
-        for (auto& button : mainButtons) 
+        for (auto& button : mainButtons)
         {
             button.update(mousePos);
         }
@@ -1115,8 +1067,17 @@ int main()
                 proj.shape.getPosition().y < 0 || proj.shape.getPosition().y > windowHauteur;
             }), enemyProjectiles.end());
 
+        fond1.move(-SPEED, 0);
+        fond1bis.move(-SPEED, 0);
+
+        if (fond1.getPosition().x + windowLargeur < 0)
+            fond1.setPosition(windowLargeur - 1, 0);
+        if (fond1bis.getPosition().x + windowLargeur < 0)
+            fond1bis.setPosition(windowLargeur - 1, 0);
+
         window3.clear();
         window3.draw(fond1);
+        window3.draw(fond1bis);
         window3.draw(*persoActuel);
         for (const auto& ennemi : ennemis) window3.draw(ennemi.sprite);
         for (const auto& proj : projectiles) window3.draw(proj.shape);
@@ -1180,8 +1141,17 @@ int main()
             [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
             projectiles.end());
 
+        fond2.move(-SPEED, 0);
+        fond2bis.move(-SPEED, 0);
+
+        if (fond2.getPosition().x + windowLargeur < 0)
+            fond2.setPosition(windowLargeur - 1, 0);
+        if (fond2bis.getPosition().x + windowLargeur < 0)
+            fond2bis.setPosition(windowLargeur - 1, 0);
+
         window2.clear();
         window2.draw(fond2);
+        window2.draw(fond2bis);
         window2.draw(*persoActuel);
         for (auto& proj : projectiles) {
             window2.draw(proj.shape);
@@ -1227,7 +1197,7 @@ int main()
             {
                 if (event1.mouseButton.button == sf::Mouse::Right)
                 {
-                    
+
                 }
             }*/
         }
@@ -1241,8 +1211,17 @@ int main()
             [&](Projectile& p) { return p.isOffScreen(windowLargeur, windowHauteur); }),
             projectiles.end());
 
+        fond3.move(-SPEED, 0);
+        fond3bis.move(-SPEED, 0);
+
+        if (fond3.getPosition().x + windowLargeur < 0)
+            fond3.setPosition(windowLargeur - 1, 0);
+        if (fond3bis.getPosition().x + windowLargeur < 0)
+            fond3bis.setPosition(windowLargeur - 1, 0);
+
         window1.clear();
         window1.draw(fond3);
+        window1.draw(fond3bis);
         window1.draw(*persoActuel);
         for (auto& proj : projectiles) {
             window1.draw(proj.shape);
