@@ -13,10 +13,94 @@
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
 const float SPEED = 1.0f;
 sf::Text gameOverText;
+sf::Text victoireText;
+
+// Dimensions de la fenêtre
+const int WINDOW_WIDTH = 1920;
+const int WINDOW_HEIGHT = 1080;
 
 float clamp(float value, float min, float max) {
     return (value < min) ? min : (value > max ? max : value);
 }
+
+
+class Nuage {
+public:
+    Nuage(sf::Texture& nuageA, sf::Texture& nuageB)
+        : nuageATexture(nuageA),
+        nuageBTexture(nuageB) {}
+
+    void spawnNuage() {
+        const int nombreDeZones = 5;
+        int zoneHauteur = WINDOW_HEIGHT / nombreDeZones;
+
+        int zoneChoisie = rand() % nombreDeZones;
+
+        int positionY = zoneChoisie * zoneHauteur + (rand() % (zoneHauteur - 50)); // Décalage de 50px pour éviter les collisions sur le bord de la zone
+
+        // Placez les nuages
+        sf::Sprite nuageA;
+        nuageA.setColor(sf::Color(255, 255, 255, 128)); // RGBA (rouge, vert, bleu, opacité)
+        if (rand() % 2 == 0)
+            nuageA.setTexture(nuageATexture);
+        else
+            nuageA.setTexture(nuageBTexture);
+        nuageA.setPosition(WINDOW_WIDTH + rand() % 200, positionY);
+        nuages.push_back(nuageA);
+
+        // Créez le deuxième nuage dans une autre zone aléatoire
+        zoneChoisie = rand() % nombreDeZones;
+        positionY = zoneChoisie * zoneHauteur + (rand() % (zoneHauteur - 50));
+
+        sf::Sprite nuageB;
+        nuageB.setColor(sf::Color(255, 255, 255, 170)); // RGBA (rouge, vert, bleu, opacité)
+        if (rand() % 2 == 0)
+            nuageB.setTexture(nuageATexture);
+        else
+            nuageB.setTexture(nuageBTexture);
+        nuageB.setPosition(WINDOW_WIDTH + rand() % 200, positionY);
+        nuages.push_back(nuageB);
+    }
+
+
+    void updateNuages() {
+        for (auto& nuage : nuages) {
+            nuage.move(-2 - rand() % 2, 0);
+        }
+
+        nuages.erase(
+            std::remove_if(nuages.begin(), nuages.end(), [](const sf::Sprite& n) {
+                return n.getPosition().x < -n.getGlobalBounds().width;
+                }),
+            nuages.end()
+        );
+    }
+
+    void draw(sf::RenderWindow& window) {
+        for (const auto& nuage : nuages) {
+            window.draw(nuage);
+        }
+    }
+    const std::vector<sf::Sprite>& getNuages() const {
+        return nuages;
+    }
+
+private:
+    sf::Sprite creerNuage(sf::Texture& texture1, sf::Texture& texture2) {
+        sf::Sprite nuage;
+        if (rand() % 2 == 0)
+            nuage.setTexture(texture1);
+        else
+            nuage.setTexture(texture2);
+
+        nuage.setPosition(rand() % 1920, rand() % 1080);
+        return nuage;
+    }
+
+    sf::Texture& nuageATexture;
+    sf::Texture& nuageBTexture;
+    std::vector<sf::Sprite> nuages;
+};
 
 class Slider {
 public:
@@ -126,9 +210,6 @@ struct LevelObject
     std::string type;
 };
 
-// Dimensions de la fenêtre
-const int WINDOW_WIDTH = 1920;
-const int WINDOW_HEIGHT = 1080;
 
 // Vitesse du joueur et des projectiles
 const float PLAYER_SPEED = 5.0f;
@@ -361,6 +442,15 @@ int main() {
 
     sf::Sprite* persoChoisis = nullptr;
 
+
+    sf::Texture nuageATexture, nuageBTexture;
+    if (!nuageATexture.loadFromFile("assets/nuageA.png") ||
+        !nuageBTexture.loadFromFile("assets/nuageB.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    Nuage nuageManager(nuageATexture, nuageBTexture);
+
     sf::Texture enemy1Texture;
     if (!enemy1Texture.loadFromFile("assets/runners.gif"))
     {
@@ -452,6 +542,7 @@ int main() {
     sf::Clock enemySpawnClock;
     sf::Clock enemyShootClock;
     sf::Clock bossShootClock;
+    sf::Clock spawnClock;
 
     // Seed pour la génération aléatoire
     std::srand(static_cast<unsigned>(std::time(nullptr)));
@@ -460,6 +551,7 @@ int main() {
     int stalkersKilled = 0;
     int clickersKilled = 0;
     int bossKilled = 0;
+    bool victoire = false;
 
     while (window4.isOpen())
     {
@@ -862,6 +954,12 @@ int main() {
     gameOverText.setCharacterSize(50);
     gameOverText.setFillColor(sf::Color::Red);
     gameOverText.setPosition(WINDOW_WIDTH / 2 - gameOverText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 - gameOverText.getGlobalBounds().height / 2);
+
+    victoireText.setFont(font);
+    victoireText.setString("Victoire !");
+    victoireText.setCharacterSize(50);
+    victoireText.setFillColor(sf::Color::Yellow);
+    victoireText.setPosition(WINDOW_WIDTH / 2 - victoireText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 - victoireText.getGlobalBounds().height / 2);
 
     if (playerHealth <= 0) {
         gameOverText.setString("Game Over");
@@ -1288,7 +1386,9 @@ int main() {
                 ++it;
             }
         }
-
+        if (bossKilled >= TOTAL_BOSS_TO_KILL) {
+            victoire = true;
+        }
         // Vérification de la santé du joueur
         if (playerHealth <= 0) {
             gameOverText.setString("Game Over");
@@ -1301,9 +1401,14 @@ int main() {
             fond1.setPosition(WINDOW_WIDTH - 1, 0);
         if (fond1bis.getPosition().x + WINDOW_WIDTH < 0)
             fond1bis.setPosition(WINDOW_WIDTH - 1, 0);
+        if (spawnClock.getElapsedTime().asSeconds() > 2.0f) {
+            nuageManager.spawnNuage();
+            spawnClock.restart();
+        }
 
         // Affichage
         window3.clear();
+        nuageManager.updateNuages();
         window3.draw(fond1);
         window3.draw(fond1bis);
         window3.draw(*persoActuel);
@@ -1329,6 +1434,7 @@ int main() {
         for (const auto& boss : bosses) {
             window3.draw(boss.sprite);
         }
+        nuageManager.draw(window3);
         if (playerHealth <= 0) {
             window3.clear();
             window3.draw(map1);
@@ -1353,6 +1459,30 @@ int main() {
                 window3.close();
             }
         }
+        else if (victoire) {
+            window3.clear();
+
+            // Afficher le fond semi-transparent
+            sf::RectangleShape semiTransparentRect(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+            semiTransparentRect.setFillColor(sf::Color(0, 0, 0, 150)); // Noir semi-transparent
+            window3.draw(semiTransparentRect);
+
+            // Afficher "Victoire !"
+            window3.draw(victoireText);
+
+            sf::Text instructionText;
+            instructionText.setFont(font);
+            instructionText.setString("Appuyez sur ECHAP pour quitter");
+            instructionText.setCharacterSize(20);
+            instructionText.setFillColor(sf::Color::White);
+            instructionText.setPosition(WINDOW_WIDTH / 2 - instructionText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 + 50);
+            window3.draw(instructionText);
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
+                window3.close();
+            }
+        }
+        
         window3.display();
     }
     return 0;
