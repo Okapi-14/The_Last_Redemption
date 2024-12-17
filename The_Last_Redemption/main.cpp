@@ -286,6 +286,8 @@ int main() {
     bool effectPlaying = false;
     bool effectPlaying2 = false;
     bool bossSpawned = false;
+    bool stalkersSpawned = false;
+    bool clickersSpawned = false;
 
     sf::Texture persoETexture;
     if (!persoETexture.loadFromFile("assets/Ellie.png")) {
@@ -303,29 +305,29 @@ int main() {
     sf::Sprite perso2Icon(persoATexture);
     perso2Icon.setPosition(170, 0);
 
-    sf::Texture runnersTexture;
-    if (!runnersTexture.loadFromFile("assets/runners.gif")) {
+    sf::Texture runnersIconTexture;
+    if (!runnersIconTexture.loadFromFile("assets/runners.gif")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite runners(runnersTexture);
-    runners.setPosition(10, 300);
+    sf::Sprite runnersIcon(runnersIconTexture);
+    runnersIcon.setPosition(10, 300);
 
-    sf::Texture stalkersTexture;
-    if (!stalkersTexture.loadFromFile("assets/stalkers.gif")) {
+    sf::Texture stalkersIconTexture;
+    if (!stalkersIconTexture.loadFromFile("assets/stalkers.gif")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite stalkers(stalkersTexture);
-    stalkers.setPosition(250, 300);
+    sf::Sprite stalkersIcon(stalkersIconTexture);
+    stalkersIcon.setPosition(250, 300);
 
-    sf::Texture clickersTexture;
-    if (!clickersTexture.loadFromFile("assets/clickers.gif")) {
+    sf::Texture clickersIconTexture;
+    if (!clickersIconTexture.loadFromFile("assets/clickers.gif")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
-    sf::Sprite clickers(clickersTexture);
-    clickers.setPosition(10, 600);
+    sf::Sprite clickersIcon(clickersIconTexture);
+    clickersIcon.setPosition(10, 600);
 
     std::vector<LevelObject> placedObjects;
     LevelObject* currentObject = nullptr;
@@ -359,10 +361,24 @@ int main() {
 
     sf::Sprite* persoChoisis = nullptr;
 
-    sf::Texture enemyTexture1, enemyTexture2, enemyTexture3, enemyTexture4;
-    if (!enemyTexture1.loadFromFile("assets/runners.gif") ||
-        !enemyTexture2.loadFromFile("assets/stalkers.gif") ||
-        !enemyTexture3.loadFromFile("assets/clickers.gif")) {
+    sf::Texture enemy1Texture;
+    if (!enemy1Texture.loadFromFile("assets/runners.gif"))
+    {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+
+    sf::Texture enemy2Texture;
+    if (!enemy2Texture.loadFromFile("assets/stalkers.gif"))
+    {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+
+    sf::Texture enemy3Texture;
+    if (!enemy3Texture.loadFromFile("assets/clickers.gif"))
+    {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
         return -1;
     }
 
@@ -379,7 +395,7 @@ int main() {
         return -1;
     }
     sf::Sprite map1(map1Texture);
-    
+
     sf::Texture fond1Texture;
     if (!fond1Texture.loadFromFile("assets/map1.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
@@ -396,7 +412,7 @@ int main() {
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
-    int playerHealth = 10;
+    int playerHealth = 100;
 
     // Vecteur pour stocker les projectiles du joueur
     std::vector<sf::RectangleShape> playerProjectiles;
@@ -422,7 +438,9 @@ int main() {
     };
 
     // Vecteur pour stocker les ennemis
-    std::vector<Enemy> enemies;
+    std::vector<Enemy> runners;
+    std::vector<Enemy> stalkers;
+    std::vector<Enemy> clickers;
     std::vector<Boss> bosses;
 
     // Vecteur pour stocker les projectiles des ennemis
@@ -438,7 +456,9 @@ int main() {
     // Seed pour la génération aléatoire
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    int enemiesKilled = 0;
+    int runnersKilled = 0;
+    int stalkersKilled = 0;
+    int clickersKilled = 0;
     int bossKilled = 0;
 
     while (window4.isOpen())
@@ -595,23 +615,23 @@ int main() {
                         currentObject->sprite.setPosition(mousePos.x, mousePos.y);
                         isDragging = true;
                     }
-                    else if (runners.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (runnersIcon.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        placedObjects.push_back({ sf::Sprite(runnersTexture), "Runner" });
+                        placedObjects.push_back({ sf::Sprite(runnersIconTexture), "Runner" });
                         currentObject = &placedObjects.back();
                         currentObject->sprite.setPosition(mousePos.x, mousePos.y);
                         isDragging = true;
                     }
-                    else if (stalkers.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (stalkersIcon.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        placedObjects.push_back({ sf::Sprite(stalkersTexture), "Stalker" });
+                        placedObjects.push_back({ sf::Sprite(stalkersIconTexture), "Stalker" });
                         currentObject = &placedObjects.back();
                         currentObject->sprite.setPosition(mousePos.x, mousePos.y);
                         isDragging = true;
                     }
-                    else if (clickers.getGlobalBounds().contains(mousePos.x, mousePos.y))
+                    else if (clickersIcon.getGlobalBounds().contains(mousePos.x, mousePos.y))
                     {
-                        placedObjects.push_back({ sf::Sprite(clickersTexture), "Clicker" });
+                        placedObjects.push_back({ sf::Sprite(clickersIconTexture), "Clicker" });
                         currentObject = &placedObjects.back();
                         currentObject->sprite.setPosition(mousePos.x, mousePos.y);
                         isDragging = true;
@@ -790,9 +810,9 @@ int main() {
             window4.draw(fond1);
             window4.draw(perso1Icon);
             window4.draw(perso2Icon);
-            window4.draw(runners);
-            window4.draw(stalkers);
-            window4.draw(clickers);
+            window4.draw(runnersIcon);
+            window4.draw(stalkersIcon);
+            window4.draw(clickersIcon);
             window4.draw(backButtonMaker);
             for (const auto& obj : placedObjects)
             {
@@ -884,22 +904,55 @@ int main() {
             projectileClock.restart();
         }
 
-        while (enemies.size() < MAX_ACTIVE_ENEMIES && enemiesKilled < TOTAL_ENEMIES_TO_KILL) {
-            sf::Sprite enemySprite;
-            int enemyType = std::rand() % 3;
-            if (enemyType == 0) enemySprite.setTexture(enemyTexture1);
-            else if (enemyType == 1) enemySprite.setTexture(enemyTexture2);
-            else enemySprite.setTexture(enemyTexture3);
+        while (runners.size() < MAX_ACTIVE_ENEMIES && runnersKilled < TOTAL_ENEMIES_TO_KILL) {
+            sf::Sprite enemy1Sprite;
+            enemy1Sprite.setTexture(enemy1Texture);
 
-            float xPosition = WINDOW_WIDTH - enemySprite.getGlobalBounds().width - (std::rand() % 200);
-            float yPosition = static_cast<float>(std::rand() % (WINDOW_HEIGHT - static_cast<int>(enemySprite.getGlobalBounds().height)));
-            enemySprite.setPosition(xPosition, yPosition);
+            float xPosition = WINDOW_WIDTH - enemy1Sprite.getGlobalBounds().width - (std::rand() % 200);
+            float yPosition = static_cast<float>(std::rand() % (WINDOW_HEIGHT - static_cast<int>(enemy1Sprite.getGlobalBounds().height)));
+            enemy1Sprite.setPosition(xPosition, yPosition);
 
             // Initialisation de la direction aléatoire pour l'ennemi
             sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-            enemies.push_back({ enemySprite, 5, randomDirection });
+            runners.push_back({ enemy1Sprite, 5, randomDirection });
+        }
+
+        if (!stalkersSpawned && runnersKilled >= TOTAL_ENEMIES_TO_KILL && runners.empty()) {
+            while (stalkers.size() < MAX_ACTIVE_ENEMIES && stalkersKilled < TOTAL_ENEMIES_TO_KILL)
+            {
+                sf::Sprite enemy2Sprite;
+                enemy2Sprite.setTexture(enemy2Texture);
+
+                float xPosition = WINDOW_WIDTH - enemy2Sprite.getGlobalBounds().width - (std::rand() % 200);
+                float yPosition = static_cast<float>(std::rand() % (WINDOW_HEIGHT - static_cast<int>(enemy2Sprite.getGlobalBounds().height)));
+                enemy2Sprite.setPosition(xPosition, yPosition);
+
+                // Initialisation de la direction aléatoire pour l'ennemi
+                sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
+                if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
+
+                stalkers.push_back({ enemy2Sprite, 7, randomDirection });
+            }
+        }
+
+        if (!clickersSpawned && stalkersKilled >= TOTAL_ENEMIES_TO_KILL && stalkers.empty()) {
+            while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL)
+            {
+                sf::Sprite enemy3Sprite;
+                enemy3Sprite.setTexture(enemy3Texture);
+
+                float xPosition = WINDOW_WIDTH - enemy3Sprite.getGlobalBounds().width - (std::rand() % 200);
+                float yPosition = static_cast<float>(std::rand() % (WINDOW_HEIGHT - static_cast<int>(enemy3Sprite.getGlobalBounds().height)));
+                enemy3Sprite.setPosition(xPosition, yPosition);
+
+                // Initialisation de la direction aléatoire pour l'ennemi
+                sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
+                if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
+
+                clickers.push_back({ enemy3Sprite, 10, randomDirection });
+            }
         }
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
@@ -929,26 +982,82 @@ int main() {
         );
 
         // Déplacement des ennemis aléatoires
-        for (auto& enemy : enemies) {
+        for (auto& enemy1 : runners) {
             // Mouvement aléatoire
-            enemy.sprite.move(enemy.direction * ENEMY_SPEED);
+            enemy1.sprite.move(enemy1.direction * ENEMY_SPEED);
 
             // Réfléchir s'il atteint un bord
-            if (enemy.sprite.getPosition().x < 0 || enemy.sprite.getPosition().x + enemy.sprite.getGlobalBounds().width > WINDOW_WIDTH) {
-                enemy.direction.x = -enemy.direction.x;
+            if (enemy1.sprite.getPosition().x < 0 || enemy1.sprite.getPosition().x + enemy1.sprite.getGlobalBounds().width > WINDOW_WIDTH) {
+                enemy1.direction.x = -enemy1.direction.x;
             }
-            if (enemy.sprite.getPosition().y < 0 || enemy.sprite.getPosition().y + enemy.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
-                enemy.direction.y = -enemy.direction.y;
+            if (enemy1.sprite.getPosition().y < 0 || enemy1.sprite.getPosition().y + enemy1.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
+                enemy1.direction.y = -enemy1.direction.y;
             }
 
             // Gestion des tirs des ennemis vers le joueur
             if (enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
                 sf::RectangleShape projectile(sf::Vector2f(10, 10));
                 projectile.setFillColor(sf::Color::Green);
-                projectile.setPosition(enemy.sprite.getPosition() + sf::Vector2f(enemy.sprite.getGlobalBounds().width / 2, enemy.sprite.getGlobalBounds().height / 2));
-                sf::Vector2f enemyPos = enemy.sprite.getPosition() + sf::Vector2f(enemy.sprite.getGlobalBounds().width / 2, enemy.sprite.getGlobalBounds().height / 2);
+                projectile.setPosition(enemy1.sprite.getPosition() + sf::Vector2f(enemy1.sprite.getGlobalBounds().width / 2, enemy1.sprite.getGlobalBounds().height / 2));
+                sf::Vector2f enemy1Pos = enemy1.sprite.getPosition() + sf::Vector2f(enemy1.sprite.getGlobalBounds().width / 2, enemy1.sprite.getGlobalBounds().height / 2);
                 sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
-                sf::Vector2f direction = playerPos - enemyPos;
+                sf::Vector2f direction = playerPos - enemy1Pos;
+                float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                if (length != 0) direction /= length;
+
+                enemyProjectiles.push_back({ projectile, direction });
+                enemyShootClock.restart();
+            }
+        }
+
+        for (auto& enemy2 : stalkers) {
+            // Mouvement aléatoire
+            enemy2.sprite.move(enemy2.direction * ENEMY_SPEED);
+
+            // Réfléchir s'il atteint un bord
+            if (enemy2.sprite.getPosition().x < 0 || enemy2.sprite.getPosition().x + enemy2.sprite.getGlobalBounds().width > WINDOW_WIDTH) {
+                enemy2.direction.x = -enemy2.direction.x;
+            }
+            if (enemy2.sprite.getPosition().y < 0 || enemy2.sprite.getPosition().y + enemy2.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
+                enemy2.direction.y = -enemy2.direction.y;
+            }
+
+            // Gestion des tirs des ennemis vers le joueur
+            if (enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
+                sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                projectile.setFillColor(sf::Color::Green);
+                projectile.setPosition(enemy2.sprite.getPosition() + sf::Vector2f(enemy2.sprite.getGlobalBounds().width / 2, enemy2.sprite.getGlobalBounds().height / 2));
+                sf::Vector2f enemy2Pos = enemy2.sprite.getPosition() + sf::Vector2f(enemy2.sprite.getGlobalBounds().width / 2, enemy2.sprite.getGlobalBounds().height / 2);
+                sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
+                sf::Vector2f direction = playerPos - enemy2Pos;
+                float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+                if (length != 0) direction /= length;
+
+                enemyProjectiles.push_back({ projectile, direction });
+                enemyShootClock.restart();
+            }
+        }
+
+        for (auto& enemy3 : clickers) {
+            // Mouvement aléatoire
+            enemy3.sprite.move(enemy3.direction * ENEMY_SPEED);
+
+            // Réfléchir s'il atteint un bord
+            if (enemy3.sprite.getPosition().x < 0 || enemy3.sprite.getPosition().x + enemy3.sprite.getGlobalBounds().width > WINDOW_WIDTH) {
+                enemy3.direction.x = -enemy3.direction.x;
+            }
+            if (enemy3.sprite.getPosition().y < 0 || enemy3.sprite.getPosition().y + enemy3.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
+                enemy3.direction.y = -enemy3.direction.y;
+            }
+
+            // Gestion des tirs des ennemis vers le joueur
+            if (enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
+                sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                projectile.setFillColor(sf::Color::Green);
+                projectile.setPosition(enemy3.sprite.getPosition() + sf::Vector2f(enemy3.sprite.getGlobalBounds().width / 2, enemy3.sprite.getGlobalBounds().height / 2));
+                sf::Vector2f enemy3Pos = enemy3.sprite.getPosition() + sf::Vector2f(enemy3.sprite.getGlobalBounds().width / 2, enemy3.sprite.getGlobalBounds().height / 2);
+                sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
+                sf::Vector2f direction = playerPos - enemy3Pos;
                 float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                 if (length != 0) direction /= length;
 
@@ -961,28 +1070,78 @@ int main() {
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
         // Vérification des collisions projectiles-ennemis
-        for (auto it = playerProjectiles.begin(); it != playerProjectiles.end(); ) {
-            bool hit = false;
-            for (auto enemyIt = enemies.begin(); enemyIt != enemies.end(); ) {
-                if (checkCollision(it->getGlobalBounds(), enemyIt->sprite.getGlobalBounds())) {
-                    enemyIt->health -= 1;
-                    if (enemyIt->health <= 0) {
-                        enemyIt = enemies.erase(enemyIt);
-                        ++enemiesKilled;
+        for (auto it1 = playerProjectiles.begin(); it1 != playerProjectiles.end(); ) {
+            bool hit1 = false;
+            for (auto enemy1It = runners.begin(); enemy1It != runners.end(); ) {
+                if (checkCollision(it1->getGlobalBounds(), enemy1It->sprite.getGlobalBounds())) {
+                    enemy1It->health -= 1;
+                    if (enemy1It->health <= 0) {
+                        enemy1It = runners.erase(enemy1It);
+                        ++runnersKilled;
                     }
                     else {
-                        ++enemyIt;
+                        ++enemy1It;
                     }
-                    it = playerProjectiles.erase(it);
-                    hit = true;
+                    it1 = playerProjectiles.erase(it1);
+                    hit1 = true;
                     break;
                 }
                 else {
-                    ++enemyIt;
+                    ++enemy1It;
                 }
             }
-            if (!hit) {
-                ++it;
+            if (!hit1) {
+                ++it1;
+            }
+        }
+
+        for (auto it2 = playerProjectiles.begin(); it2 != playerProjectiles.end(); ) {
+            bool hit2 = false;
+            for (auto enemy2It = stalkers.begin(); enemy2It != stalkers.end(); ) {
+                if (checkCollision(it2->getGlobalBounds(), enemy2It->sprite.getGlobalBounds())) {
+                    enemy2It->health -= 1;
+                    if (enemy2It->health <= 0) {
+                        enemy2It = stalkers.erase(enemy2It);
+                        ++stalkersKilled;
+                    }
+                    else {
+                        ++enemy2It;
+                    }
+                    it2 = playerProjectiles.erase(it2);
+                    hit2 = true;
+                    break;
+                }
+                else {
+                    ++enemy2It;
+                }
+            }
+            if (!hit2) {
+                ++it2;
+            }
+        }
+
+        for (auto it3 = playerProjectiles.begin(); it3 != playerProjectiles.end(); ) {
+            bool hit3 = false;
+            for (auto enemy3It = clickers.begin(); enemy3It != clickers.end(); ) {
+                if (checkCollision(it3->getGlobalBounds(), enemy3It->sprite.getGlobalBounds())) {
+                    enemy3It->health -= 1;
+                    if (enemy3It->health <= 0) {
+                        enemy3It = clickers.erase(enemy3It);
+                        ++clickersKilled;
+                    }
+                    else {
+                        ++enemy3It;
+                    }
+                    it3 = playerProjectiles.erase(it3);
+                    hit3 = true;
+                    break;
+                }
+                else {
+                    ++enemy3It;
+                }
+            }
+            if (!hit3) {
+                ++it3;
             }
         }
 
@@ -997,7 +1156,7 @@ int main() {
             }
         }
 
-        if (!bossSpawned && enemiesKilled >= TOTAL_ENEMIES_TO_KILL && enemies.empty()) {
+        if (!bossSpawned && clickersKilled >= TOTAL_ENEMIES_TO_KILL && clickers.empty()) {
             sf::Sprite bossSprite;
             bossSprite.setTexture(boss1Texture);
 
@@ -1152,8 +1311,14 @@ int main() {
         for (const auto& projectile : playerProjectiles) {
             window3.draw(projectile);
         }
-        for (const auto& enemy : enemies) {
-            window3.draw(enemy.sprite);
+        for (const auto& enemy1 : runners) {
+            window3.draw(enemy1.sprite);
+        }
+        for (const auto& enemy2 : stalkers) {
+            window3.draw(enemy2.sprite);
+        }
+        for (const auto& enemy3 : clickers) {
+            window3.draw(enemy3.sprite);
         }
         for (const auto& projectile : enemyProjectiles) {
             window3.draw(projectile.shape);
@@ -1190,6 +1355,5 @@ int main() {
         }
         window3.display();
     }
-
     return 0;
 }
