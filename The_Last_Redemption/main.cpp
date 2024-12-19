@@ -242,9 +242,9 @@ const float BOSS_SPEED = 0.5f;
 const float ENEMY_PROJECTILE_SPEED = 3.0f;
 const float BOSS_PROJECTILE_SPEED = 5.0f;
 
-const int MAX_ACTIVE_ENEMIES = 3;
+const int MAX_ACTIVE_ENEMIES = 2;
 const int MAX_ACTIVE_BOSSES = 1;
-const int TOTAL_ENEMIES_TO_KILL = 7;
+const int TOTAL_ENEMIES_TO_KILL = 5;
 const int TOTAL_BOSS_TO_KILL = 1;
 
 // Fonction pour détecter les collisions
@@ -1020,13 +1020,11 @@ int main() {
     if (persoChoisis == &perso1)
     {
         persoChoisis->setPosition(initialCharacterPosition);
-        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso1;
     }
     else if (persoChoisis == &perso2)
     {
         persoChoisis->setPosition(initialCharacterPosition);
-        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso2;
     }
 
@@ -1071,7 +1069,23 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && persoActuel->getPosition().y + persoActuel->getGlobalBounds().height < WINDOW_HEIGHT) {
             persoActuel->move(0, PLAYER_SPEED);
         }
-        
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && projectileClock.getElapsedTime().asMilliseconds() > 300) {
+            // Calcul de la direction du tir vers la souris
+            sf::Vector2f mousePosition = window3.mapPixelToCoords(sf::Mouse::getPosition(window3));
+            sf::Vector2f playerPosition = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
+            sf::Vector2f direction = mousePosition - playerPosition;
+            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+            if (length != 0) direction /= length;
+
+            // Création du projectile
+            sf::RectangleShape projectile(sf::Vector2f(10, 10));
+            projectile.setFillColor(sf::Color::Red);
+            projectile.setPosition(playerPosition);
+
+            playerProjectiles.push_back(projectile);
+            projectileClock.restart();
+        }
+
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
@@ -1490,7 +1504,7 @@ int main() {
             sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-            bosses.push_back({ bossSprite, 50, randomDirection });
+            bosses.push_back({ bossSprite, 30, randomDirection });
             bossSpawned = true;
             if (bossSpawned) {
                 sonBloater.play();
