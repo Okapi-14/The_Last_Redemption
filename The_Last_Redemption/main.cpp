@@ -242,11 +242,26 @@ const float BOSS_SPEED = 0.5f;
 const float ENEMY_PROJECTILE_SPEED = 3.0f;
 const float BOSS_PROJECTILE_SPEED = 5.0f;
 
-const int MAX_ACTIVE_ENEMIES = 2;
+const int MAX_ACTIVE_ENEMIES = 3;
 const int MAX_ACTIVE_BOSSES = 1;
-const int TOTAL_ENEMIES_TO_KILL = 5;
+const int TOTAL_ENEMIES_TO_KILL = 7;
 const int TOTAL_BOSS_TO_KILL = 1;
+// mines pour le boss
+std::vector<sf::CircleShape> mines; // Liste des mines sur la carte
+sf::Clock mineSpawnClock; // Horloge pour poser des mines toutes les 5 secondes
 
+// Fonction pour générer des mines
+void spawnMines() {
+    for (int i = 0; i < 3; ++i) { // Le boss pose 3 mines toutes les 5 secondes
+        sf::CircleShape mine(15); // Rayon de 15 pixels
+        mine.setFillColor(sf::Color::Yellow); // Couleur jaune
+        float x = static_cast<float>(rand() % (WINDOW_WIDTH - 30)); // Position aléatoire
+        float y = static_cast<float>(rand() % (WINDOW_HEIGHT - 30));
+        mine.setPosition(x, y);
+        mines.push_back(mine);
+        std::cout << "Mine posée à : (" << x << ", " << y << ")\n";
+    }
+}
 // Fonction pour détecter les collisions
 bool checkCollision(const sf::FloatRect& a, const sf::FloatRect& b) {
     return a.intersects(b);
@@ -1020,11 +1035,13 @@ int main() {
     if (persoChoisis == &perso1)
     {
         persoChoisis->setPosition(initialCharacterPosition);
+        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso1;
     }
     else if (persoChoisis == &perso2)
     {
         persoChoisis->setPosition(initialCharacterPosition);
+        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso2;
     }
 
@@ -1069,23 +1086,7 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && persoActuel->getPosition().y + persoActuel->getGlobalBounds().height < WINDOW_HEIGHT) {
             persoActuel->move(0, PLAYER_SPEED);
         }
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && projectileClock.getElapsedTime().asMilliseconds() > 300) {
-            // Calcul de la direction du tir vers la souris
-            sf::Vector2f mousePosition = window3.mapPixelToCoords(sf::Mouse::getPosition(window3));
-            sf::Vector2f playerPosition = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
-            sf::Vector2f direction = mousePosition - playerPosition;
-            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-            if (length != 0) direction /= length;
-
-            // Création du projectile
-            sf::RectangleShape projectile(sf::Vector2f(10, 10));
-            projectile.setFillColor(sf::Color::Red);
-            projectile.setPosition(playerPosition);
-
-            playerProjectiles.push_back(projectile);
-            projectileClock.restart();
-        }
-
+        
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
@@ -1459,11 +1460,22 @@ int main() {
         // Vérification des collisions projectiles-joueur
         for (auto it = enemyProjectiles.begin(); it != enemyProjectiles.end(); ) {
             if (checkCollision(it->shape.getGlobalBounds(), persoActuel->getGlobalBounds())) {
-                playerHealth -= 1;
                 if (!isBouclierActive) {
                     playerHealth -= 1; // Le joueur prend des dégâts seulement si le bouclier est désactivé
                 }
                 it = enemyProjectiles.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+        for (auto it = mines.begin(); it != mines.end(); ) {
+            if (checkCollision(it->getGlobalBounds(), persoActuel->getGlobalBounds())) {
+                if (!isBouclierActive) {
+                    playerHealth -= 5;
+                }
+                it = mines.erase(it);
+                std::cout << "Collision avec une mine ! Santé actuelle : " << playerHealth << "\n";
             }
             else {
                 ++it;
@@ -1504,12 +1516,18 @@ int main() {
             sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-            bosses.push_back({ bossSprite, 30, randomDirection });
+            bosses.push_back({ bossSprite, 50, randomDirection });
             bossSpawned = true;
             if (bossSpawned) {
                 sonBloater.play();
                 sonBloater.setLoop(true);
             }
+
+            if (mineSpawnClock.getElapsedTime().asSeconds() >= 5.0f) {
+                spawnMines();
+                mineSpawnClock.restart();
+            }
+
         }
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
@@ -1622,6 +1640,7 @@ int main() {
             }
         }
 
+        
         // Vérification des collisions projectiles-joueur
         for (auto it = bossProjectiles.begin(); it != bossProjectiles.end(); ) {
             if (checkCollision(it->shape.getGlobalBounds(), persoActuel->getGlobalBounds())) {
@@ -1768,6 +1787,10 @@ int main() {
         for (auto& bonus : activeBonuses) {
             bonus.draw(window3);
         }
+        for (const auto& mine : mines) {
+            window3.draw(mine);
+        }
+
         nuageManager.draw(window3);
         if (playerHealth <= 0) {
             window3.clear();
