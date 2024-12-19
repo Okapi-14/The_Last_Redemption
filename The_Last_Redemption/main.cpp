@@ -252,7 +252,7 @@ sf::Clock mineSpawnClock; // Horloge pour poser des mines toutes les 5 secondes
 
 // Fonction pour générer des mines
 void spawnMines() {
-    for (int i = 0; i < 3; ++i) { // Le boss pose 3 mines toutes les 5 secondes
+    for (int i = 0; i < 5; ++i) { // Le boss pose 3 mines toutes les 5 secondes
         sf::CircleShape mine(15); // Rayon de 15 pixels
         mine.setFillColor(sf::Color::Yellow); // Couleur jaune
         float x = static_cast<float>(rand() % (WINDOW_WIDTH - 30)); // Position aléatoire
