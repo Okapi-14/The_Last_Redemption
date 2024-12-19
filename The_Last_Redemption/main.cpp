@@ -149,8 +149,8 @@ bool checkCollision(const sf::FloatRect& a, const sf::FloatRect& b) {
 
 int main() {
     // Initialisation de SFML
-    sf::RenderWindow window3(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "niveau1", sf::type::None);
-    sf::RenderWindow window4(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Menu"), sf::type::None;
+    sf::RenderWindow window3(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "niveau1", sf::Style::None);
+    sf::RenderWindow window4(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Menu", sf::Style::None);
     window3.setFramerateLimit(60);
     window4.setFramerateLimit(60);
 
@@ -944,7 +944,7 @@ int main() {
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
-        
+
         while (runners.size() < MAX_ACTIVE_ENEMIES && runnersKilled < TOTAL_ENEMIES_TO_KILL) {
             sf::Sprite enemy1Sprite;
             enemy1Sprite.setTexture(enemy1Texture);
