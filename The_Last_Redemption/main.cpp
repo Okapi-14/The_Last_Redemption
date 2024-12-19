@@ -149,8 +149,8 @@ bool checkCollision(const sf::FloatRect& a, const sf::FloatRect& b) {
 
 int main() {
     // Initialisation de SFML
-    sf::RenderWindow window3(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "niveau1");
-    sf::RenderWindow window4(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Menu");
+    sf::RenderWindow window3(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "niveau1", sf::type::None);
+    sf::RenderWindow window4(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Menu"), sf::type::None;
     window3.setFramerateLimit(60);
     window4.setFramerateLimit(60);
 
