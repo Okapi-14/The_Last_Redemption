@@ -1224,6 +1224,8 @@ int main() {
             sf::Sprite bossSprite;
             bossSprite.setTexture(boss1Texture);
 
+            bossSprite.setScale(2.0f, 2.0f);
+
             float xPosition = WINDOW_WIDTH - bossSprite.getGlobalBounds().width - (std::rand() % 200);
             float yPosition = static_cast<float>(std::rand() % (WINDOW_HEIGHT - static_cast<int>(bossSprite.getGlobalBounds().height)));
             bossSprite.setPosition(xPosition, yPosition);
