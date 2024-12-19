@@ -426,7 +426,7 @@ int main() {
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
-    int playerHealth = 100;
+    int playerHealth = 25;
 
     // Vecteur pour stocker les projectiles du joueur
     std::vector<sf::RectangleShape> playerProjectiles;
@@ -988,8 +988,7 @@ int main() {
 
         if (!clickersSpawned && stalkersKilled >= TOTAL_ENEMIES_TO_KILL && stalkers.empty()) {
             sonStalkers.stop();
-            while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL)
-            {
+            while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL) {
                 sf::Sprite enemy3Sprite;
                 enemy3Sprite.setTexture(enemy3Texture);
 
@@ -1001,11 +1000,16 @@ int main() {
                 sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
                 if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-                clickers.push_back({ enemy3Sprite, 10, randomDirection });
-                sonClickers.play();
-                sonClickers.setLoop(true);
+                // Ajouter une chance réduite que chaque clicker tire à chaque frame
+                bool willShoot = (std::rand() % 10) > 2; // 70% de chance de ne pas tirer
+                if (willShoot) {
+                    clickers.push_back({ enemy3Sprite, 10, randomDirection });
+                    sonClickers.play();
+                    sonClickers.setLoop(true);
+                }
             }
         }
+
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
@@ -1295,7 +1299,7 @@ int main() {
             sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-            bosses.push_back({ bossSprite, 15, randomDirection });
+            bosses.push_back({ bossSprite, 30, randomDirection });
             bossSpawned = true;
             if (bossSpawned) {
                 sonBloater.play();
