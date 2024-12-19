@@ -138,7 +138,7 @@ const float BOSS_SPEED = 0.5f;
 const float ENEMY_PROJECTILE_SPEED = 3.0f;
 const float BOSS_PROJECTILE_SPEED = 5.0f;
 
-const int MAX_ACTIVE_ENEMIES = 4;
+const int MAX_ACTIVE_ENEMIES = 2;
 const int MAX_ACTIVE_BOSSES = 1;
 const int TOTAL_ENEMIES_TO_KILL = 5;
 const int TOTAL_BOSS_TO_KILL = 1;
@@ -995,21 +995,31 @@ int main() {
                 enemy1.direction.y = -enemy1.direction.y;
             }
 
-            // Gestion des tirs des ennemis vers le joueur
-            if (enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
-                sf::RectangleShape projectile(sf::Vector2f(10, 10));
-                projectile.setFillColor(sf::Color::Green);
-                projectile.setPosition(enemy1.sprite.getPosition() + sf::Vector2f(enemy1.sprite.getGlobalBounds().width / 2, enemy1.sprite.getGlobalBounds().height / 2));
+            // Gestion des tirs des "clickers" vers le joueur : tir unique
+            if (enemy1.enemyShootClock.getElapsedTime().asMilliseconds() > 1500) {
                 sf::Vector2f enemy1Pos = enemy1.sprite.getPosition() + sf::Vector2f(enemy1.sprite.getGlobalBounds().width / 2, enemy1.sprite.getGlobalBounds().height / 2);
                 sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
                 sf::Vector2f direction = playerPos - enemy1Pos;
                 float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                 if (length != 0) direction /= length;
 
-                enemyProjectiles.push_back({ projectile, direction });
-                enemyShootClock.restart();
+                // Tir unique
+                sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                projectile.setFillColor(sf::Color::Green);
+                projectile.setPosition(enemy1Pos);
+
+                // Normaliser la direction
+                sf::Vector2f normalizedDir = direction;
+                float dirLength = std::sqrt(normalizedDir.x * normalizedDir.x + normalizedDir.y * normalizedDir.y);
+                if (dirLength != 0) normalizedDir /= dirLength;
+
+                // Ajouter le projectile à la liste
+                enemyProjectiles.push_back({ projectile, normalizedDir });
+
+                enemy1.enemyShootClock.restart();
             }
         }
+
 
         for (auto& enemy2 : stalkers) {
             // Mouvement aléatoire
@@ -1023,21 +1033,37 @@ int main() {
                 enemy2.direction.y = -enemy2.direction.y;
             }
 
-            // Gestion des tirs des ennemis vers le joueur
-            if (enemy2.enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
-                sf::RectangleShape projectile(sf::Vector2f(10, 10));
-                projectile.setFillColor(sf::Color::Green);
-                projectile.setPosition(enemy2.sprite.getPosition() + sf::Vector2f(enemy2.sprite.getGlobalBounds().width / 2, enemy2.sprite.getGlobalBounds().height / 2));
+            // Gestion des tirs des "clickers" vers le joueur : tir en arc
+            if (enemy2.enemyShootClock.getElapsedTime().asMilliseconds() > 2000) {
                 sf::Vector2f enemy2Pos = enemy2.sprite.getPosition() + sf::Vector2f(enemy2.sprite.getGlobalBounds().width / 2, enemy2.sprite.getGlobalBounds().height / 2);
                 sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
                 sf::Vector2f direction = playerPos - enemy2Pos;
                 float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                 if (length != 0) direction /= length;
 
-                enemyProjectiles.push_back({ projectile, direction });
+                // Créer 2 directions pour les projectiles en arc
+                std::vector<sf::Vector2f> directions = {
+                    { direction.x * std::cos(-0.2f) - direction.y * std::sin(-0.2f), direction.x * std::sin(-0.2f) + direction.y * std::cos(-0.2f) },
+                    { direction.x * std::cos(0.2f) - direction.y * std::sin(0.2f), direction.x * std::sin(0.2f) + direction.y * std::cos(0.2f) }
+                };
+
+                for (const auto& dir : directions) {
+                    sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                    projectile.setFillColor(sf::Color::Green);
+                    projectile.setPosition(enemy2Pos);
+
+                    // Normaliser chaque direction
+                    sf::Vector2f normalizedDir = dir;
+                    float dirLength = std::sqrt(normalizedDir.x * normalizedDir.x + normalizedDir.y * normalizedDir.y);
+                    if (dirLength != 0) normalizedDir /= dirLength;
+
+                    enemyProjectiles.push_back({ projectile, normalizedDir });
+                }
+
                 enemy2.enemyShootClock.restart();
             }
         }
+
 
 
         for (auto& enemy3 : clickers) {
@@ -1053,20 +1079,37 @@ int main() {
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir en arc
-            if (enemy3.enemyShootClock.getElapsedTime().asMilliseconds() > 1000) {
-                sf::RectangleShape projectile(sf::Vector2f(10, 10));
-                projectile.setFillColor(sf::Color::Green);
-                projectile.setPosition(enemy3.sprite.getPosition() + sf::Vector2f(enemy3.sprite.getGlobalBounds().width / 2, enemy3.sprite.getGlobalBounds().height / 2));
+            if (enemy3.enemyShootClock.getElapsedTime().asMilliseconds() > 2000) {
                 sf::Vector2f enemy3Pos = enemy3.sprite.getPosition() + sf::Vector2f(enemy3.sprite.getGlobalBounds().width / 2, enemy3.sprite.getGlobalBounds().height / 2);
                 sf::Vector2f playerPos = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
                 sf::Vector2f direction = playerPos - enemy3Pos;
                 float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
                 if (length != 0) direction /= length;
 
-                enemyProjectiles.push_back({ projectile, direction });
+                // Créer 3 directions pour les projectiles en arc
+                std::vector<sf::Vector2f> directions = {
+                    { direction.x * std::cos(-0.2f) - direction.y * std::sin(-0.2f), direction.x * std::sin(-0.2f) + direction.y * std::cos(-0.2f) },
+                    direction,
+                    { direction.x * std::cos(0.2f) - direction.y * std::sin(0.2f), direction.x * std::sin(0.2f) + direction.y * std::cos(0.2f) }
+                };
+
+                for (const auto& dir : directions) {
+                    sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                    projectile.setFillColor(sf::Color::Green);
+                    projectile.setPosition(enemy3Pos);
+
+                    // Normaliser chaque direction
+                    sf::Vector2f normalizedDir = dir;
+                    float dirLength = std::sqrt(normalizedDir.x * normalizedDir.x + normalizedDir.y * normalizedDir.y);
+                    if (dirLength != 0) normalizedDir /= dirLength;
+
+                    enemyProjectiles.push_back({ projectile, normalizedDir });
+                }
+
                 enemy3.enemyShootClock.restart();
             }
         }
+
 
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
@@ -1159,6 +1202,25 @@ int main() {
         }
 
         if (!bossSpawned && clickersKilled >= TOTAL_ENEMIES_TO_KILL && clickers.empty()) {
+            sf::Text bossComingText;
+            bossComingText.setFont(font);
+            bossComingText.setString("BOSS COMING");
+            bossComingText.setCharacterSize(50);
+            bossComingText.setFillColor(sf::Color::Red);
+            bossComingText.setStyle(sf::Text::Bold);
+
+            // Centrer le texte dans la fenêtre
+            bossComingText.setPosition(WINDOW_WIDTH / 2.0f - bossComingText.getGlobalBounds().width / 2.0f,
+                WINDOW_HEIGHT / 2.0f - bossComingText.getGlobalBounds().height / 2.0f);
+
+            // Afficher temporairement le texte
+            sf::Clock displayClock;
+            while (displayClock.getElapsedTime().asSeconds() < 2.0f) {
+                window3.clear();
+                window3.draw(bossComingText);
+                window3.display();
+            }
+
             sf::Sprite bossSprite;
             bossSprite.setTexture(boss1Texture);
 
