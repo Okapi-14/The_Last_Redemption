@@ -12,6 +12,7 @@
 
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
 const float SPEED = 1.0f;
+const float BOITE_SPEED = 2.0f;
 sf::Text gameOverText;
 
 float clamp(float value, float min, float max) {
@@ -71,8 +72,6 @@ private:
     float x, y, width, height;
     bool dragging = false;
 };
-
-
 
 struct Button {
     sf::RectangleShape shape;
@@ -159,43 +158,55 @@ int main() {
     Slider musicSlider(200, 300, 400, 10, 0.0f);
     Slider ambientSlider(200, 400, 400, 10, 0.0f);
 
-    sf::SoundBuffer buffer;
-    if (!buffer.loadFromFile("assets/nature.wav")) {
+    sf::Music ambianceMenu;
+    if (!ambianceMenu.openFromFile("assets/nature.wav")) {
         std::cerr << "Erreur lors du chargement du son d'effet\n";
         return -1;
     }
-    sf::Sound ambientSound;
-    ambientSound.setBuffer(buffer);
-    ambientSound.setLoop(true);
-    ambientSound.setVolume(0);
+    ambianceMenu.setVolume(0);
 
-    sf::SoundBuffer buffer2;
-    if (!buffer2.loadFromFile("assets/runners_sound.wav")) {
+    sf::SoundBuffer runnersS;
+    if (!runnersS.loadFromFile("assets/runners_sound.wav")) {
         std::cerr << "Erreur lors du chargement du son d'effet\n";
         return -1;
     }
-    sf::Sound effectSound;
-    effectSound.setBuffer(buffer2);
-    effectSound.setLoop(true);
-    effectSound.setVolume(0);
+    sf::Sound sonRunners;
+    sonRunners.setBuffer(runnersS);
+    sonRunners.setVolume(0);
 
-    sf::SoundBuffer buffer3;
-    if (!buffer3.loadFromFile("assets/stalkers_sound.wav")) {
+    sf::SoundBuffer stalkersS;
+    if (!stalkersS.loadFromFile("assets/stalkers_sound.wav")) {
         std::cerr << "Erreur lors du chargement du son d'effet\n";
         return -1;
     }
-    sf::Sound effectSound2;
-    effectSound2.setBuffer(buffer3);
-    effectSound2.setLoop(true);
-    effectSound2.setVolume(0);
+    sf::Sound sonStalkers;
+    sonStalkers.setBuffer(stalkersS);
+    sonStalkers.setVolume(0);
 
-    sf::Music music;
-    if (!music.openFromFile("assets/electro.ogg")) {
+    sf::SoundBuffer clickersS;
+    if (!clickersS.loadFromFile("assets/clickers_sound.wav")) {
+        std::cerr << "Erreur lors du chargement du son d'effet\n";
+        return -1;
+    }
+    sf::Sound sonClickers;
+    sonClickers.setBuffer(clickersS);
+    sonClickers.setVolume(0);
+
+    sf::SoundBuffer BloaterS;
+    if (!BloaterS.loadFromFile("assets/bloater_sound.wav")) {
+        std::cerr << "Erreur lors du chargement du son d'effet\n";
+        return -1;
+    }
+    sf::Sound sonBloater;
+    sonBloater.setBuffer(BloaterS);
+    sonBloater.setVolume(0);
+
+    sf::Music musiqueJeu;
+    if (!musiqueJeu.openFromFile("assets/electro.ogg")) {
         std::cerr << "Erreur lors du chargement de la musique\n";
         return -1;
     }
-    music.setVolume(0);
-    music.setLoop(true);
+    musiqueJeu.setVolume(0);
 
     sf::Font font;
     if (!font.loadFromFile("assets/arial.ttf"))
@@ -285,7 +296,10 @@ int main() {
     bool musicPlaying = false;
     bool effectPlaying = false;
     bool effectPlaying2 = false;
+    bool effectPlaying3 = false;
+    bool effectPlaying4 = false;
     bool bossSpawned = false;
+    bool runnersSpawned = false;
     bool stalkersSpawned = false;
     bool clickersSpawned = false;
 
@@ -484,6 +498,10 @@ int main() {
                         {
                             if (button.text.getString() == "Jouer")
                             {
+                                if (musiqueJeu.getVolume() > 0) {
+                                    musiqueJeu.play();
+                                    musicPlaying = true;
+                                }
                                 isMainMenu = false;
                                 isParametre = false;
                                 isNiveaux = false;
@@ -491,6 +509,8 @@ int main() {
                                 isChoosingDiff = false;
                                 isControles = false;
                                 isMusique = false;
+                                ambianceMenu.stop();
+                                ambientPlaying = false;
                             }
                             if (button.text.getString() == "Quitter")
                             {
@@ -728,48 +748,64 @@ int main() {
                 musicSlider.handleEvent(event4, window4);
                 ambientSlider.handleEvent(event4, window4);
 
+                // Volume settings
                 float ambientVolume = ambientSlider.getValue();
                 float musicVolume = musicSlider.getValue();
                 float effectVolume = effectsSlider.getValue();
                 float effectVolume2 = effectsSlider.getValue();
+                float effectVolume3 = effectsSlider.getValue();
+                float effectVolume4 = effectsSlider.getValue();
 
-                ambientSound.setVolume(ambientVolume);
+                // Ambient sound control
+                ambianceMenu.setVolume(ambientVolume);
                 if (ambientVolume > 0 && !ambientPlaying) {
-                    ambientSound.play();
+                    ambianceMenu.play();
                     ambientPlaying = true;
                 }
                 else if (ambientVolume == 0 && ambientPlaying) {
-                    ambientSound.stop();
+                    ambianceMenu.stop();
                     ambientPlaying = false;
                 }
 
-                effectSound.setVolume(effectVolume);
+                // Effect sound control for runners
+                sonRunners.setVolume(effectVolume);
                 if (effectVolume > 0 && !effectPlaying) {
-                    effectSound.play();
                     effectPlaying = true;
                 }
                 else if (effectVolume == 0 && effectPlaying) {
-                    effectSound.stop();
                     effectPlaying = false;
                 }
-
-                effectSound2.setVolume(effectVolume2);
+                // Effect sound control for stalkers
+                sonStalkers.setVolume(effectVolume2);
                 if (effectVolume2 > 0 && !effectPlaying2) {
-                    effectSound2.play();
                     effectPlaying2 = true;
                 }
                 else if (effectVolume2 == 0 && effectPlaying2) {
-                    effectSound2.stop();
                     effectPlaying2 = false;
                 }
 
-                music.setVolume(musicVolume);
+                sonClickers.setVolume(effectVolume3);
+                if (effectVolume3 > 0 && !effectPlaying3) {
+                    effectPlaying3 = true;
+                }
+                else if (effectVolume3 == 0 && effectPlaying3) {
+                    effectPlaying3 = false;
+                }
+
+                sonBloater.setVolume(effectVolume4);
+                if (effectVolume4 > 0 && !effectPlaying4) {
+                    effectPlaying4 = true;
+                }
+                else if (effectVolume4 == 0 && effectPlaying4) {
+                    effectPlaying4 = false;
+                }
+
+                // Music control
+                musiqueJeu.setVolume(musicVolume);
                 if (musicVolume > 0 && !musicPlaying) {
-                    music.play();
                     musicPlaying = true;
                 }
                 else if (musicVolume == 0 && musicPlaying) {
-                    music.pause();
                     musicPlaying = false;
                 }
             }
@@ -905,6 +941,10 @@ int main() {
             projectileClock.restart();
         }
 
+        // Mise à jour de la barre de vie du joueur
+        healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
+
+        
         while (runners.size() < MAX_ACTIVE_ENEMIES && runnersKilled < TOTAL_ENEMIES_TO_KILL) {
             sf::Sprite enemy1Sprite;
             enemy1Sprite.setTexture(enemy1Texture);
@@ -918,9 +958,15 @@ int main() {
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
             runners.push_back({ enemy1Sprite, 5, randomDirection });
+            runnersSpawned = true;
+            if (runnersSpawned) {
+                sonRunners.play();
+                sonRunners.setLoop(true);
+            }
         }
 
         if (!stalkersSpawned && runnersKilled >= TOTAL_ENEMIES_TO_KILL && runners.empty()) {
+            sonRunners.stop();
             while (stalkers.size() < MAX_ACTIVE_ENEMIES && stalkersKilled < TOTAL_ENEMIES_TO_KILL)
             {
                 sf::Sprite enemy2Sprite;
@@ -935,10 +981,13 @@ int main() {
                 if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
                 stalkers.push_back({ enemy2Sprite, 7, randomDirection });
+                sonStalkers.play();
+                sonStalkers.setLoop(true);
             }
         }
 
         if (!clickersSpawned && stalkersKilled >= TOTAL_ENEMIES_TO_KILL && stalkers.empty()) {
+            sonStalkers.stop();
             while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL)
             {
                 sf::Sprite enemy3Sprite;
@@ -953,6 +1002,8 @@ int main() {
                 if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
                 clickers.push_back({ enemy3Sprite, 10, randomDirection });
+                sonClickers.play();
+                sonClickers.setLoop(true);
             }
         }
 
@@ -963,11 +1014,11 @@ int main() {
             projectile.move(PROJECTILE_SPEED, 0);
         }
 
-        for (auto& projectile : enemyProjectiles) {
-            projectile.shape.move(projectile.direction * ENEMY_PROJECTILE_SPEED);
+        for (auto& enemyProjectile : enemyProjectiles) {
+            enemyProjectile.shape.move(enemyProjectile.direction * ENEMY_PROJECTILE_SPEED);
         }
 
-        // Supprimer les projectiles hors de l'écran
+        // Gestion des projets hors écran et collisions
         playerProjectiles.erase(
             std::remove_if(playerProjectiles.begin(), playerProjectiles.end(), [](const sf::RectangleShape& p) {
                 return p.getPosition().x > WINDOW_WIDTH || p.getPosition().x < 0 || p.getPosition().y < 0 || p.getPosition().y > WINDOW_HEIGHT;
@@ -993,6 +1044,9 @@ int main() {
             }
             if (enemy1.sprite.getPosition().y < 0 || enemy1.sprite.getPosition().y + enemy1.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy1.direction.y = -enemy1.direction.y;
+            }
+            if (checkCollision(persoActuel->getGlobalBounds(), enemy1.sprite.getGlobalBounds())) {
+                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir unique
@@ -1031,6 +1085,9 @@ int main() {
             }
             if (enemy2.sprite.getPosition().y < 0 || enemy2.sprite.getPosition().y + enemy2.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy2.direction.y = -enemy2.direction.y;
+            }
+            if (checkCollision(persoActuel->getGlobalBounds(), enemy2.sprite.getGlobalBounds())) {
+                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir en arc
@@ -1076,6 +1133,9 @@ int main() {
             }
             if (enemy3.sprite.getPosition().y < 0 || enemy3.sprite.getPosition().y + enemy3.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy3.direction.y = -enemy3.direction.y;
+            }
+            if (checkCollision(persoActuel->getGlobalBounds(), enemy3.sprite.getGlobalBounds())) {
+                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir en arc
@@ -1202,6 +1262,7 @@ int main() {
         }
 
         if (!bossSpawned && clickersKilled >= TOTAL_ENEMIES_TO_KILL && clickers.empty()) {
+            sonClickers.stop();
             sf::Text bossComingText;
             bossComingText.setFont(font);
             bossComingText.setString("BOSS COMING");
@@ -1235,7 +1296,11 @@ int main() {
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
             bosses.push_back({ bossSprite, 15, randomDirection });
-            bossSpawned = true; // Le boss a été spawn, ne pas le refaire
+            bossSpawned = true;
+            if (bossSpawned) {
+                sonBloater.play();
+                sonBloater.setLoop(true);
+            }
         }
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
@@ -1275,6 +1340,9 @@ int main() {
             }
             if (boss.sprite.getPosition().y < 0 || boss.sprite.getPosition().y + boss.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 boss.direction.y = -boss.direction.y;
+            }
+            if (checkCollision(persoActuel->getGlobalBounds(), boss.sprite.getGlobalBounds())) {
+                playerHealth -= 5; // Boss est plus dangereux
             }
 
             // Gestion des tirs des ennemis vers le joueur
@@ -1327,6 +1395,7 @@ int main() {
                     if (bossIt->health <= 0) {
                         bossIt = bosses.erase(bossIt);
                         ++bossKilled;
+                        sonBloater.stop();
                     }
                     else {
                         ++bossIt;
