@@ -11,13 +11,141 @@
 #endif
 
 const sf::Vector2f initialCharacterPosition(100.0f, 500.0f);
-const float SPEED = 1.0f;
-const float BOITE_SPEED = 2.0f;
+const float SPEED_FOND = 1.0f;
+const float BONUS_SPEED_BOOST = 1.5f;
+// multi tir
+bool isMultiShotActive = false;
+sf::Clock multiShotClock;
+const float MULTI_SHOT_DURATION = 10.0f;
+// bouclier 
+bool isBouclierActive = false;
+sf::Clock bouclierClock;
+const float BOUCLIER_DURATION = 5.0f;
+
+enum NB_BONUS {
+    vitesse,
+    soin,
+    multi_tir,
+    bouclier
+};
 sf::Text gameOverText;
+sf::Text victoireText;
+
+// Dimensions de la fenêtre
+const int WINDOW_WIDTH = 1920;
+const int WINDOW_HEIGHT = 1080;
 
 float clamp(float value, float min, float max) {
     return (value < min) ? min : (value > max ? max : value);
 }
+
+// Classe Bonus
+class Bonus {
+public:
+    Bonus(sf::Texture& texture, const sf::Vector2f& position, const std::string& type)
+        : type(type)
+    {
+        sprite.setTexture(texture);
+        sprite.setPosition(position);
+        sprite.setScale(3.0f, 3.0f);
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(sprite);
+        sprite.move(-2.0f, 0);
+    }
+
+    const sf::FloatRect getBounds() const {
+        return sprite.getGlobalBounds();
+    }
+
+    const std::string& getType() const {
+        return type;
+    }
+
+private:
+    sf::Sprite sprite;
+    std::string type;
+};
+
+class Nuage {
+public:
+    Nuage(sf::Texture& nuageA, sf::Texture& nuageB)
+        : nuageATexture(nuageA),
+        nuageBTexture(nuageB) {
+    }
+
+    void spawnNuage() {
+        const int nombreDeZones = 5;
+        int zoneHauteur = WINDOW_HEIGHT / nombreDeZones;
+
+        int zoneChoisie = rand() % nombreDeZones;
+
+        int positionY = zoneChoisie * zoneHauteur + (rand() % (zoneHauteur - 50)); // Décalage de 50px pour éviter les collisions sur le bord de la zone
+
+        // Placez les nuages
+        sf::Sprite nuageA;
+        nuageA.setColor(sf::Color(255, 255, 255, 128)); // RGBA (rouge, vert, bleu, opacité)
+        if (rand() % 2 == 0)
+            nuageA.setTexture(nuageATexture);
+        else
+            nuageA.setTexture(nuageBTexture);
+        nuageA.setPosition(WINDOW_WIDTH + rand() % 200, positionY);
+        nuages.push_back(nuageA);
+
+        // Créez le deuxième nuage dans une autre zone aléatoire
+        zoneChoisie = rand() % nombreDeZones;
+        positionY = zoneChoisie * zoneHauteur + (rand() % (zoneHauteur - 50));
+
+        sf::Sprite nuageB;
+        nuageB.setColor(sf::Color(255, 255, 255, 170)); // RGBA (rouge, vert, bleu, opacité)
+        if (rand() % 2 == 0)
+            nuageB.setTexture(nuageATexture);
+        else
+            nuageB.setTexture(nuageBTexture);
+        nuageB.setPosition(WINDOW_WIDTH + rand() % 200, positionY);
+        nuages.push_back(nuageB);
+    }
+
+
+    void updateNuages() {
+        for (auto& nuage : nuages) {
+            nuage.move(-2 - rand() % 2, 0);
+        }
+
+        nuages.erase(
+            std::remove_if(nuages.begin(), nuages.end(), [](const sf::Sprite& n) {
+                return n.getPosition().x < -n.getGlobalBounds().width;
+                }),
+            nuages.end()
+        );
+    }
+
+    void draw(sf::RenderWindow& window) {
+        for (const auto& nuage : nuages) {
+            window.draw(nuage);
+        }
+    }
+    const std::vector<sf::Sprite>& getNuages() const {
+        return nuages;
+    }
+
+private:
+    sf::Sprite creerNuage(sf::Texture& texture1, sf::Texture& texture2) {
+        sf::Sprite nuage;
+        if (rand() % 2 == 0)
+            nuage.setTexture(texture1);
+        else
+            nuage.setTexture(texture2);
+
+        nuage.setPosition(rand() % 1920, rand() % 1080);
+        return nuage;
+    }
+
+    sf::Texture& nuageATexture;
+    sf::Texture& nuageBTexture;
+    std::vector<sf::Sprite> nuages;
+};
 
 class Slider {
 public:
@@ -125,22 +253,21 @@ struct LevelObject
     std::string type;
 };
 
-// Dimensions de la fenêtre
-const int WINDOW_WIDTH = 1920;
-const int WINDOW_HEIGHT = 1080;
 
 // Vitesse du joueur et des projectiles
-const float PLAYER_SPEED = 5.0f;
-const float PROJECTILE_SPEED = 7.0f;
-const float ENEMY_SPEED = 1.0f; // Vitesse réduite pour les ennemis
+float PLAYER_SPEED = 5.0f;
+float PROJECTILE_SPEED = 7.0f;
+const float ENEMY_SPEED = 1.0f; 
 const float BOSS_SPEED = 0.5f;
 const float ENEMY_PROJECTILE_SPEED = 3.0f;
 const float BOSS_PROJECTILE_SPEED = 5.0f;
 
-const int MAX_ACTIVE_ENEMIES = 2;
+const int MAX_ACTIVE_ENEMIES = 3;
 const int MAX_ACTIVE_BOSSES = 1;
-const int TOTAL_ENEMIES_TO_KILL = 5;
+const int TOTAL_ENEMIES_TO_KILL = 7;
 const int TOTAL_BOSS_TO_KILL = 1;
+
+
 
 // Fonction pour détecter les collisions
 bool checkCollision(const sf::FloatRect& a, const sf::FloatRect& b) {
@@ -299,9 +426,31 @@ int main() {
     bool effectPlaying3 = false;
     bool effectPlaying4 = false;
     bool bossSpawned = false;
-    bool runnersSpawned = false;
     bool stalkersSpawned = false;
     bool clickersSpawned = false;
+
+
+    //Textures bonus
+    sf::Texture speedBonusTexture;
+    if (!speedBonusTexture.loadFromFile("assets/speed_bonus.png")) {
+        std::cout << "Erreur de chargement de l'image" << std::endl;
+        return -1;
+    }
+    sf::Texture healthBonusTexture;
+    if (!healthBonusTexture.loadFromFile("assets/health_bonus.png")) {
+        std::cout << "Erreur de chargement de l'image" << std::endl;
+        return -1;
+    }
+    sf::Texture multitirBonusTexture;
+    if (!multitirBonusTexture.loadFromFile("assets/multi_tir_bonus.png")) {
+        std::cout << "Erreur de chargement de l'image" << std::endl;
+        return -1;
+    }
+    sf::Texture shieldBonusTexture;
+    if (!shieldBonusTexture.loadFromFile("assets/gilet_bonus.png")) {
+        std::cout << "Erreur de chargement de l'image" << std::endl;
+        return -1;
+    }
 
     sf::Texture persoETexture;
     if (!persoETexture.loadFromFile("assets/Ellie.png")) {
@@ -375,6 +524,15 @@ int main() {
 
     sf::Sprite* persoChoisis = nullptr;
 
+
+    sf::Texture nuageATexture, nuageBTexture;
+    if (!nuageATexture.loadFromFile("assets/nuageA.png") ||
+        !nuageBTexture.loadFromFile("assets/nuageB.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    Nuage nuageManager(nuageATexture, nuageBTexture);
+
     sf::Texture enemy1Texture;
     if (!enemy1Texture.loadFromFile("assets/runners.gif"))
     {
@@ -430,6 +588,7 @@ int main() {
 
     // Vecteur pour stocker les projectiles du joueur
     std::vector<sf::RectangleShape> playerProjectiles;
+    std::vector<sf::Vector2f> projectileDirections;
 
     // Structure pour un ennemi
     struct Enemy {
@@ -462,11 +621,13 @@ int main() {
     std::vector<Projectile> enemyProjectiles;
     std::vector<Projectile> bossProjectiles;
 
-    // Horloges pour gérer les tirs et les ennemis
+    // Horloges 
     sf::Clock projectileClock;
     sf::Clock enemySpawnClock;
     sf::Clock enemyShootClock;
     sf::Clock bossShootClock;
+    sf::Clock spawnClock;
+
 
     // Seed pour la génération aléatoire
     std::srand(static_cast<unsigned>(std::time(nullptr)));
@@ -475,6 +636,8 @@ int main() {
     int stalkersKilled = 0;
     int clickersKilled = 0;
     int bossKilled = 0;
+    int bossHealth = 50;
+    bool victoire = false;
 
     while (window4.isOpen())
     {
@@ -498,10 +661,6 @@ int main() {
                         {
                             if (button.text.getString() == "Jouer")
                             {
-                                if (musiqueJeu.getVolume() > 0) {
-                                    musiqueJeu.play();
-                                    musicPlaying = true;
-                                }
                                 isMainMenu = false;
                                 isParametre = false;
                                 isNiveaux = false;
@@ -509,8 +668,6 @@ int main() {
                                 isChoosingDiff = false;
                                 isControles = false;
                                 isMusique = false;
-                                ambianceMenu.stop();
-                                ambientPlaying = false;
                             }
                             if (button.text.getString() == "Quitter")
                             {
@@ -882,11 +1039,13 @@ int main() {
     if (persoChoisis == &perso1)
     {
         persoChoisis->setPosition(initialCharacterPosition);
+        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso1;
     }
     else if (persoChoisis == &perso2)
     {
         persoChoisis->setPosition(initialCharacterPosition);
+        persoChoisis->setScale(0.7f, 0.7f);
         persoActuel = &perso2;
     }
 
@@ -900,9 +1059,17 @@ int main() {
     gameOverText.setFillColor(sf::Color::Red);
     gameOverText.setPosition(WINDOW_WIDTH / 2 - gameOverText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 - gameOverText.getGlobalBounds().height / 2);
 
+    victoireText.setFont(font);
+    victoireText.setString("Victoire !");
+    victoireText.setCharacterSize(50);
+    victoireText.setFillColor(sf::Color::Yellow);
+    victoireText.setPosition(WINDOW_WIDTH / 2 - victoireText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 - victoireText.getGlobalBounds().height / 2);
+
     if (playerHealth <= 0) {
         gameOverText.setString("Game Over");
     }
+
+    std::vector<Bonus> activeBonuses;
 
     while (window3.isOpen()) {
         sf::Event event3;
@@ -924,25 +1091,6 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && persoActuel->getPosition().y + persoActuel->getGlobalBounds().height < WINDOW_HEIGHT) {
             persoActuel->move(0, PLAYER_SPEED);
         }
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && projectileClock.getElapsedTime().asMilliseconds() > 300) {
-            // Calcul de la direction du tir vers la souris
-            sf::Vector2f mousePosition = window3.mapPixelToCoords(sf::Mouse::getPosition(window3));
-            sf::Vector2f playerPosition = persoActuel->getPosition() + sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
-            sf::Vector2f direction = mousePosition - playerPosition;
-            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-            if (length != 0) direction /= length;
-
-            // Création du projectile
-            sf::RectangleShape projectile(sf::Vector2f(10, 10));
-            projectile.setFillColor(sf::Color::Red);
-            projectile.setPosition(playerPosition);
-
-            playerProjectiles.push_back(projectile);
-            projectileClock.restart();
-        }
-
-        // Mise à jour de la barre de vie du joueur
-        healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
 
         while (runners.size() < MAX_ACTIVE_ENEMIES && runnersKilled < TOTAL_ENEMIES_TO_KILL) {
@@ -958,15 +1106,9 @@ int main() {
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
             runners.push_back({ enemy1Sprite, 5, randomDirection });
-            runnersSpawned = true;
-            if (runnersSpawned) {
-                sonRunners.play();
-                sonRunners.setLoop(true);
-            }
         }
 
         if (!stalkersSpawned && runnersKilled >= TOTAL_ENEMIES_TO_KILL && runners.empty()) {
-            sonRunners.stop();
             while (stalkers.size() < MAX_ACTIVE_ENEMIES && stalkersKilled < TOTAL_ENEMIES_TO_KILL)
             {
                 sf::Sprite enemy2Sprite;
@@ -981,14 +1123,12 @@ int main() {
                 if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
                 stalkers.push_back({ enemy2Sprite, 7, randomDirection });
-                sonStalkers.play();
-                sonStalkers.setLoop(true);
             }
         }
 
         if (!clickersSpawned && stalkersKilled >= TOTAL_ENEMIES_TO_KILL && stalkers.empty()) {
-            sonStalkers.stop();
-            while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL) {
+            while (clickers.size() < MAX_ACTIVE_ENEMIES && clickersKilled < TOTAL_ENEMIES_TO_KILL)
+            {
                 sf::Sprite enemy3Sprite;
                 enemy3Sprite.setTexture(enemy3Texture);
 
@@ -1000,29 +1140,20 @@ int main() {
                 sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
                 if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-                // Ajouter une chance réduite que chaque clicker tire à chaque frame
-                bool willShoot = (std::rand() % 10) > 2; // 70% de chance de ne pas tirer
-                if (willShoot) {
-                    clickers.push_back({ enemy3Sprite, 10, randomDirection });
-                    sonClickers.play();
-                    sonClickers.setLoop(true);
-                }
+                clickers.push_back({ enemy3Sprite, 10, randomDirection });
             }
         }
-
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
         // Déplacement des projectiles
-        for (auto& projectile : playerProjectiles) {
-            projectile.move(PROJECTILE_SPEED, 0);
+            
+
+        for (auto& projectile : enemyProjectiles) {
+            projectile.shape.move(projectile.direction * ENEMY_PROJECTILE_SPEED);
         }
 
-        for (auto& enemyProjectile : enemyProjectiles) {
-            enemyProjectile.shape.move(enemyProjectile.direction * ENEMY_PROJECTILE_SPEED);
-        }
-
-        // Gestion des projets hors écran et collisions
+        // Supprimer les projectiles hors de l'écran
         playerProjectiles.erase(
             std::remove_if(playerProjectiles.begin(), playerProjectiles.end(), [](const sf::RectangleShape& p) {
                 return p.getPosition().x > WINDOW_WIDTH || p.getPosition().x < 0 || p.getPosition().y < 0 || p.getPosition().y > WINDOW_HEIGHT;
@@ -1048,9 +1179,6 @@ int main() {
             }
             if (enemy1.sprite.getPosition().y < 0 || enemy1.sprite.getPosition().y + enemy1.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy1.direction.y = -enemy1.direction.y;
-            }
-            if (checkCollision(persoActuel->getGlobalBounds(), enemy1.sprite.getGlobalBounds())) {
-                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir unique
@@ -1078,7 +1206,6 @@ int main() {
             }
         }
 
-
         for (auto& enemy2 : stalkers) {
             // Mouvement aléatoire
             enemy2.sprite.move(enemy2.direction * ENEMY_SPEED);
@@ -1089,9 +1216,6 @@ int main() {
             }
             if (enemy2.sprite.getPosition().y < 0 || enemy2.sprite.getPosition().y + enemy2.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy2.direction.y = -enemy2.direction.y;
-            }
-            if (checkCollision(persoActuel->getGlobalBounds(), enemy2.sprite.getGlobalBounds())) {
-                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir en arc
@@ -1125,8 +1249,6 @@ int main() {
             }
         }
 
-
-
         for (auto& enemy3 : clickers) {
             // Mouvement aléatoire
             enemy3.sprite.move(enemy3.direction * ENEMY_SPEED);
@@ -1137,9 +1259,6 @@ int main() {
             }
             if (enemy3.sprite.getPosition().y < 0 || enemy3.sprite.getPosition().y + enemy3.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 enemy3.direction.y = -enemy3.direction.y;
-            }
-            if (checkCollision(persoActuel->getGlobalBounds(), enemy3.sprite.getGlobalBounds())) {
-                playerHealth -= 1;
             }
 
             // Gestion des tirs des "clickers" vers le joueur : tir en arc
@@ -1174,7 +1293,6 @@ int main() {
             }
         }
 
-
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
@@ -1186,6 +1304,27 @@ int main() {
                     enemy1It->health -= 1;
                     if (enemy1It->health <= 0) {
                         enemy1It = runners.erase(enemy1It);
+                        if (rand() % 100 < 30) { // 30% de chance de spawn un bonus
+                            sf::Vector2f position(enemy1It->sprite.getPosition().x, enemy1It->sprite.getPosition().y);
+
+                            // Générer le type de bonus au hasard (entre 0 et 3)
+                            NB_BONUS typeDeBonus = static_cast<NB_BONUS>(rand() % 4);
+
+                            switch (typeDeBonus) {
+                            case vitesse:
+                                activeBonuses.push_back(Bonus(speedBonusTexture, position, "vitesse"));
+                                break;
+                            case soin:
+                                activeBonuses.push_back(Bonus(healthBonusTexture, position, "soin"));
+                                break;
+                            case multi_tir:
+                                activeBonuses.push_back(Bonus(multitirBonusTexture, position, "multi_tir"));
+                                break;
+                            case bouclier:
+                                activeBonuses.push_back(Bonus(shieldBonusTexture, position, "bouclier"));
+                                break;
+                            }
+                        }
                         ++runnersKilled;
                     }
                     else {
@@ -1211,6 +1350,29 @@ int main() {
                     enemy2It->health -= 1;
                     if (enemy2It->health <= 0) {
                         enemy2It = stalkers.erase(enemy2It);
+                        // Chance de faire apparaître un bonus (30% de chance)
+                        if (rand() % 100 < 30) { // 30% de chance de spawn un bonus
+                            sf::Vector2f position(enemy2It->sprite.getPosition().x, enemy2It->sprite.getPosition().y);
+
+                            // Générer le type de bonus au hasard (entre 0 et 3)
+                            NB_BONUS typeDeBonus = static_cast<NB_BONUS>(rand() % 4);
+
+                            switch (typeDeBonus) {
+                            case vitesse:
+                                activeBonuses.push_back(Bonus(speedBonusTexture, position, "vitesse"));
+                                break;
+                            case soin:
+                                activeBonuses.push_back(Bonus(healthBonusTexture, position, "soin"));
+                                break;
+                            case multi_tir:
+                                activeBonuses.push_back(Bonus(multitirBonusTexture, position, "multi_tir"));
+                                break;
+                            case bouclier:
+                                activeBonuses.push_back(Bonus(shieldBonusTexture, position, "bouclier"));
+                                break;
+                            }
+                        }
+
                         ++stalkersKilled;
                     }
                     else {
@@ -1236,6 +1398,29 @@ int main() {
                     enemy3It->health -= 1;
                     if (enemy3It->health <= 0) {
                         enemy3It = clickers.erase(enemy3It);
+                        // Chance de faire apparaître un bonus (30% de chance)
+                        if (rand() % 100 < 30) { // 30% de chance de spawn un bonus
+                            sf::Vector2f position(enemy3It->sprite.getPosition().x, enemy3It->sprite.getPosition().y);
+
+                            // Générer le type de bonus au hasard (entre 0 et 3)
+                            NB_BONUS typeDeBonus = static_cast<NB_BONUS>(rand() % 4);
+
+                            switch (typeDeBonus) {
+                            case vitesse:
+                                activeBonuses.push_back(Bonus(speedBonusTexture, position, "vitesse"));
+                                break;
+                            case soin:
+                                activeBonuses.push_back(Bonus(healthBonusTexture, position, "soin"));
+                                break;
+                            case multi_tir:
+                                activeBonuses.push_back(Bonus(multitirBonusTexture, position, "multi_tir"));
+                                break;
+                            case bouclier:
+                                activeBonuses.push_back(Bonus(shieldBonusTexture, position, "bouclier"));
+                                break;
+                            }
+                        }
+
                         ++clickersKilled;
                     }
                     else {
@@ -1257,7 +1442,9 @@ int main() {
         // Vérification des collisions projectiles-joueur
         for (auto it = enemyProjectiles.begin(); it != enemyProjectiles.end(); ) {
             if (checkCollision(it->shape.getGlobalBounds(), persoActuel->getGlobalBounds())) {
-                playerHealth -= 1;
+                if (!isBouclierActive) {
+                    playerHealth -= 1; // Le joueur prend des dégâts seulement si le bouclier est désactivé
+                }
                 it = enemyProjectiles.erase(it);
             }
             else {
@@ -1266,7 +1453,6 @@ int main() {
         }
 
         if (!bossSpawned && clickersKilled >= TOTAL_ENEMIES_TO_KILL && clickers.empty()) {
-            sonClickers.stop();
             sf::Text bossComingText;
             bossComingText.setFont(font);
             bossComingText.setString("BOSS COMING");
@@ -1299,12 +1485,8 @@ int main() {
             sf::Vector2f randomDirection(static_cast<float>(std::rand() % 3 - 1), static_cast<float>(std::rand() % 3 - 1));
             if (randomDirection.x == 0 && randomDirection.y == 0) randomDirection.x = 1; // Assurer qu'il y a toujours une direction
 
-            bosses.push_back({ bossSprite, 30, randomDirection });
-            bossSpawned = true;
-            if (bossSpawned) {
-                sonBloater.play();
-                sonBloater.setLoop(true);
-            }
+            bosses.push_back({ bossSprite, bossHealth, randomDirection });
+            bossSpawned = true; // Le boss a été spawn, ne pas le refaire
         }
 
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
@@ -1345,9 +1527,6 @@ int main() {
             if (boss.sprite.getPosition().y < 0 || boss.sprite.getPosition().y + boss.sprite.getGlobalBounds().height > WINDOW_HEIGHT) {
                 boss.direction.y = -boss.direction.y;
             }
-            if (checkCollision(persoActuel->getGlobalBounds(), boss.sprite.getGlobalBounds())) {
-                playerHealth -= 5; // Boss est plus dangereux
-            }
 
             // Gestion des tirs des ennemis vers le joueur
             if (bossShootClock.getElapsedTime().asMilliseconds() > 1000) {
@@ -1376,7 +1555,7 @@ int main() {
 
                     // Initialiser le projectile
                     sf::RectangleShape projectile(sf::Vector2f(10, 10));
-                    projectile.setFillColor(sf::Color::Green);
+                    projectile.setFillColor(sf::Color::Yellow);
                     projectile.setPosition(bossPos);
 
                     // Ajouter le projectile avec sa direction dans le vecteur
@@ -1399,7 +1578,6 @@ int main() {
                     if (bossIt->health <= 0) {
                         bossIt = bosses.erase(bossIt);
                         ++bossKilled;
-                        sonBloater.stop();
                     }
                     else {
                         ++bossIt;
@@ -1427,22 +1605,129 @@ int main() {
                 ++it;
             }
         }
-
+        if (bossKilled >= TOTAL_BOSS_TO_KILL) {
+            victoire = true;
+        }
         // Vérification de la santé du joueur
         if (playerHealth <= 0) {
             gameOverText.setString("Game Over");
         }
 
-        fond1.move(-SPEED, 0);
-        fond1bis.move(-SPEED, 0);
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //Gestion bonus 
+
+        for (auto it = activeBonuses.begin(); it != activeBonuses.end();) {
+            if (it->getBounds().intersects(persoActuel->getGlobalBounds())) {
+                if (it->getType() == "vitesse") {
+                    std::cout << "Bonus de vitesse ramasse !" << std::endl;
+                    PLAYER_SPEED += BONUS_SPEED_BOOST; // Augmente la vitesse du joueur
+                    PROJECTILE_SPEED += BONUS_SPEED_BOOST;
+                }
+                else if (it->getType() == "soin") {
+                    std::cout << "Bonus de soin ramasse !" << std::endl;
+                    playerHealth += 3;
+                }
+                else if (it->getType() == "multi_tir") {
+                    std::cout << "Bonus de tir ramasse !" << std::endl;
+                    isMultiShotActive = true;
+                    multiShotClock.restart();
+                }
+                else if (it->getType() == "bouclier") {
+                    std::cout << "Bonus de bouclier ramasse !" << std::endl;
+                    isBouclierActive = true;
+                    bouclierClock.restart();
+                }
+                it = activeBonuses.erase(it); // Supprime le bonus de la liste
+            }
+            else {
+                ++it;
+            }
+        }
+
+        if (isBouclierActive) {
+            persoActuel->setColor(sf::Color(0, 255, 255)); // Cyan pour montrer que le bouclier est actif
+        }
+        else {
+            persoActuel->setColor(sf::Color(255, 255, 255)); // Couleur normale
+        }
+
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && projectileClock.getElapsedTime().asMilliseconds() > 300) {
+            sf::Vector2f playerPosition = persoActuel->getPosition() +
+                sf::Vector2f(persoActuel->getGlobalBounds().width / 2, persoActuel->getGlobalBounds().height / 2);
+            sf::Vector2f mousePosition = window3.mapPixelToCoords(sf::Mouse::getPosition(window3));
+            sf::Vector2f direction = mousePosition - playerPosition;
+            float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+            if (length != 0) direction /= length;
+
+            if (isMultiShotActive) {
+                const int numProjectiles = 5; // Nombre de projectiles
+                const float arcAngle = 60.0f; // Angle total de l'arc (60 degrés)
+                const float angleStep = arcAngle / (numProjectiles - 1); // Espace entre chaque projectile
+
+                float baseAngle = atan2(direction.y, direction.x) * 180.0f / M_PI; // Angle de base vers la souris
+                for (int i = 0; i < numProjectiles; ++i) {
+                    // Calcule l'angle de chaque projectile
+                    float angle = baseAngle + ((i - (numProjectiles - 1) / 2.0f) * angleStep); // De -30° à +30°
+                    float radians = angle * M_PI / 180.0f; // Convertit l'angle en radians
+                    sf::Vector2f arcDirection(cos(radians), sin(radians)); // Calcul de la direction
+
+                    // Crée le projectile
+                    sf::RectangleShape projectile(sf::Vector2f(10, 10)); // Taille du projectile
+                    projectile.setFillColor(sf::Color::Blue); // Couleur bleue pour le tir multiple
+                    projectile.setPosition(playerPosition);
+                    for (size_t i = 0; i < playerProjectiles.size(); ++i) {
+                        playerProjectiles[i].move(projectileDirections[i].x * PROJECTILE_SPEED, projectileDirections[i].y * PROJECTILE_SPEED);
+                    }
+
+                    //  Ajoute le projectile et sa direction à la liste
+                    playerProjectiles.push_back(projectile);
+                    projectileDirections.push_back(arcDirection);
+                }
+
+            }
+            else {
+                // Tir simple (1 projectile)
+                sf::RectangleShape projectile(sf::Vector2f(10, 10));
+                
+                projectile.setFillColor(sf::Color::Red);
+                projectile.setPosition(playerPosition);
+
+                playerProjectiles.push_back(projectile);
+                projectileDirections.push_back(direction);
+            }
+
+            projectileClock.restart();
+        }
+
+
+        if (isMultiShotActive && multiShotClock.getElapsedTime().asSeconds() > MULTI_SHOT_DURATION) {
+            std::cout << "Fin du bonus de multi-tir" << std::endl;
+            isMultiShotActive = false;
+        }
+        if (isBouclierActive && bouclierClock.getElapsedTime().asSeconds() > BOUCLIER_DURATION) {
+            std::cout << "Fin du bouclier" << std::endl;
+            isBouclierActive = false;
+        }
+
+        fond1.move(-SPEED_FOND, 0);
+        fond1bis.move(-SPEED_FOND, 0);
 
         if (fond1.getPosition().x + WINDOW_WIDTH < 0)
             fond1.setPosition(WINDOW_WIDTH - 1, 0);
         if (fond1bis.getPosition().x + WINDOW_WIDTH < 0)
             fond1bis.setPosition(WINDOW_WIDTH - 1, 0);
+        if (spawnClock.getElapsedTime().asSeconds() > 2.0f) {
+            nuageManager.spawnNuage();
+            spawnClock.restart();
+        }
 
         // Affichage
         window3.clear();
+        nuageManager.updateNuages();
         window3.draw(fond1);
         window3.draw(fond1bis);
         window3.draw(*persoActuel);
@@ -1468,6 +1753,10 @@ int main() {
         for (const auto& boss : bosses) {
             window3.draw(boss.sprite);
         }
+        for (auto& bonus : activeBonuses) {
+            bonus.draw(window3);
+        }
+        nuageManager.draw(window3);
         if (playerHealth <= 0) {
             window3.clear();
             window3.draw(map1);
@@ -1492,6 +1781,30 @@ int main() {
                 window3.close();
             }
         }
+        else if (victoire) {
+            window3.clear();
+
+            // Afficher le fond semi-transparent
+            sf::RectangleShape semiTransparentRect(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+            semiTransparentRect.setFillColor(sf::Color(0, 0, 0, 150)); // Noir semi-transparent
+            window3.draw(semiTransparentRect);
+
+            // Afficher "Victoire !"
+            window3.draw(victoireText);
+
+            sf::Text instructionText;
+            instructionText.setFont(font);
+            instructionText.setString("Appuyez sur ECHAP pour quitter");
+            instructionText.setCharacterSize(20);
+            instructionText.setFillColor(sf::Color::White);
+            instructionText.setPosition(WINDOW_WIDTH / 2 - instructionText.getGlobalBounds().width / 2, WINDOW_HEIGHT / 2 + 50);
+            window3.draw(instructionText);
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
+                window3.close();
+            }
+        }
+
         window3.display();
     }
     return 0;
