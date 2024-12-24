@@ -611,7 +611,7 @@ int main() {
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
-    int playerHealth = 300;
+    int playerHealth = 30;
 
     // Vecteur pour stocker les projectiles du joueur
     std::vector<sf::RectangleShape> playerProjectiles;
