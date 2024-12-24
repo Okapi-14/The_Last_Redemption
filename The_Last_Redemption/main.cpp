@@ -514,6 +514,15 @@ int main() {
     perso1mort.setPosition(600, 250);
     sf::Vector2f perso1mortPosition = perso1mort.getPosition();
 
+    sf::Texture perso1victoireTexture;
+    if (!perso1victoireTexture.loadFromFile("assets/vicE.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso1victoire(perso1victoireTexture);
+    perso1victoire.setPosition(600, 250);
+    sf::Vector2f perso1victoirePosition = perso1victoire.getPosition();
+
     sf::Texture perso2Texture;
     if (!perso2Texture.loadFromFile("assets/Arthur.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
@@ -531,6 +540,15 @@ int main() {
     sf::Sprite perso2mort(perso2mortTexture);
     perso2mort.setPosition(1000, 250);
     sf::Vector2f perso2mortPosition = perso2mort.getPosition();
+
+    sf::Texture perso2victoireTexture;
+    if (!perso2victoireTexture.loadFromFile("assets/vicA.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso2victoire(perso2victoireTexture);
+    perso2victoire.setPosition(1000, 250);
+    sf::Vector2f perso2victoirePosition = perso2victoire.getPosition();
 
     sf::Sprite* persoChoisis = nullptr;
 
@@ -593,7 +611,7 @@ int main() {
     }
     sf::Sprite mainMenu(mainMenuTexture);
 
-    int playerHealth = 30;
+    int playerHealth = 300;
 
     // Vecteur pour stocker les projectiles du joueur
     std::vector<sf::RectangleShape> playerProjectiles;
@@ -1844,6 +1862,16 @@ int main() {
         }
         else if (victoire) {
             window3.clear();
+            window3.draw(map1);
+            if (persoActuel == &perso1)
+            {
+                window3.draw(perso1victoire);
+            }
+            if (persoActuel == &perso2)
+            {
+                window3.draw(perso2victoire);
+            }
+
             // Afficher le fond semi-transparent
             sf::RectangleShape semiTransparentRect(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
             semiTransparentRect.setFillColor(sf::Color(0, 0, 0, 150)); // Noir semi-transparent
