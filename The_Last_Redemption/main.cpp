@@ -242,7 +242,7 @@ const float BOSS_SPEED = 0.5f;
 const float ENEMY_PROJECTILE_SPEED = 3.0f;
 const float BOSS_PROJECTILE_SPEED = 5.0f;
 
-const int MAX_ACTIVE_ENEMIES = 3;
+const int MAX_ACTIVE_ENEMIES = 2;
 const int MAX_ACTIVE_BOSSES = 1;
 const int TOTAL_ENEMIES_TO_KILL = 7;
 const int TOTAL_BOSS_TO_KILL = 1;
@@ -259,7 +259,7 @@ void spawnMines() {
         float y = static_cast<float>(rand() % (WINDOW_HEIGHT - 30));
         mine.setPosition(x, y);
         mines.push_back(mine);
-        std::cout << "Mine posée à : (" << x << ", " << y << ")\n";
+        std::cout << "Mine posee a : (" << x << ", " << y << ")\n";
     }
 }
 // Fonction pour détecter les collisions
@@ -505,6 +505,15 @@ int main() {
     perso1.setPosition(600, 250);
     sf::Vector2f perso1Position = perso1.getPosition();
 
+    sf::Texture perso1mortTexture;
+    if (!perso1mortTexture.loadFromFile("assets/deadE.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso1mort(perso1mortTexture);
+    perso1mort.setPosition(600, 250);
+    sf::Vector2f perso1mortPosition = perso1mort.getPosition();
+
     sf::Texture perso2Texture;
     if (!perso2Texture.loadFromFile("assets/Arthur.png")) {
         std::cout << "Erreur de chargement de l'image!" << std::endl;
@@ -513,6 +522,15 @@ int main() {
     sf::Sprite perso2(perso2Texture);
     perso2.setPosition(1000, 250);
     sf::Vector2f perso2Position = perso2.getPosition();
+
+    sf::Texture perso2mortTexture;
+    if (!perso2mortTexture.loadFromFile("assets/deadA.png")) {
+        std::cout << "Erreur de chargement de l'image!" << std::endl;
+        return -1;
+    }
+    sf::Sprite perso2mort(perso2mortTexture);
+    perso2mort.setPosition(1000, 250);
+    sf::Vector2f perso2mortPosition = perso2mort.getPosition();
 
     sf::Sprite* persoChoisis = nullptr;
 
@@ -1086,7 +1104,7 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && persoActuel->getPosition().y + persoActuel->getGlobalBounds().height < WINDOW_HEIGHT) {
             persoActuel->move(0, PLAYER_SPEED);
         }
-        
+
         // Mise à jour de la barre de vie du joueur
         healthBar.setSize(sf::Vector2f(playerHealth * 10.0f, 20.0f));
 
@@ -1640,7 +1658,7 @@ int main() {
             }
         }
 
-        
+
         // Vérification des collisions projectiles-joueur
         for (auto it = bossProjectiles.begin(); it != bossProjectiles.end(); ) {
             if (checkCollision(it->shape.getGlobalBounds(), persoActuel->getGlobalBounds())) {
@@ -1795,6 +1813,14 @@ int main() {
         if (playerHealth <= 0) {
             window3.clear();
             window3.draw(map1);
+            if (persoActuel == &perso1)
+            {
+                window3.draw(perso1mort);
+            }
+            if (persoActuel == &perso2)
+            {
+                window3.draw(perso2mort);
+            }
             // Afficher le fond semi-transparent
             sf::RectangleShape semiTransparentRect(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
             semiTransparentRect.setFillColor(sf::Color(0, 0, 0, 150)); // Noir semi-transparent
